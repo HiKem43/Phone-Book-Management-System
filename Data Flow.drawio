@@ -1,7 +1,6 @@
-<?xml version="1.0" encoding="UTF-8"?>
 <mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36">
   <diagram id="gWg8ZgYwZMn1Ql7dPT0V" name="Page-1">
-    <mxGraphModel dx="6867" dy="3747" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" math="0" shadow="0">
+    <mxGraphModel dx="5860" dy="3980" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2339" pageHeight="3300" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -347,8 +346,8 @@
             <mxPoint x="1204.32" y="2187.51" as="targetPoint" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="UmJpqze8iKx18VfeJIik-43" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=13;fontFamily=Times New Roman;" value="&lt;strong&gt;nếu bạn chỉ muốn thể hiện yêu cầu xóa&lt;/strong&gt;, nhưng nếu quy trình xóa cần lấy thông tin liên hệ trước khi xóa thì có thể có" vertex="1">
-          <mxGeometry height="30" width="120" x="1430" y="2380" as="geometry" />
+        <mxCell id="UmJpqze8iKx18VfeJIik-43" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=13;fontFamily=Times New Roman;" value="Current contact information" vertex="1">
+          <mxGeometry height="30" width="120" x="1410" y="2360" as="geometry" />
         </mxCell>
         <mxCell id="UmJpqze8iKx18VfeJIik-38" parent="1" style="text;whiteSpace=wrap;fontFamily=Times New Roman;fontSize=13;" value="Deletion request" vertex="1">
           <mxGeometry height="30" width="90" x="1380" y="2057" as="geometry" />
@@ -663,7 +662,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="UmJpqze8iKx18VfeJIik-152" parent="1" style="text;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=13;" value="Delete group request" vertex="1">
-          <mxGeometry height="40" width="90" x="650" y="3150" as="geometry" />
+          <mxGeometry height="40" width="90" x="610" y="3090" as="geometry" />
         </mxCell>
         <mxCell id="UmJpqze8iKx18VfeJIik-153" edge="1" parent="1" source="UmJpqze8iKx18VfeJIik-119" style="endArrow=classic;html=1;rounded=0;exitX=0;exitY=0;exitDx=0;exitDy=0;entryX=1;entryY=0.25;entryDx=0;entryDy=0;fontFamily=Times New Roman;" target="UmJpqze8iKx18VfeJIik-114" value="">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
@@ -774,7 +773,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="UmJpqze8iKx18VfeJIik-179" parent="1" style="text;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=13;" value="Remove favorite request" vertex="1">
-          <mxGeometry height="40" width="160" x="1890" y="3050" as="geometry" />
+          <mxGeometry height="40" width="110" x="1820" y="2980" as="geometry" />
         </mxCell>
         <mxCell id="UmJpqze8iKx18VfeJIik-180" edge="1" parent="1" source="UmJpqze8iKx18VfeJIik-157" style="endArrow=classic;html=1;rounded=0;exitX=0.321;exitY=0.016;exitDx=0;exitDy=0;entryX=1;entryY=0.75;entryDx=0;entryDy=0;exitPerimeter=0;" target="UmJpqze8iKx18VfeJIik-115" value="">
           <mxGeometry height="50" relative="1" width="50" as="geometry">
@@ -788,8 +787,26 @@
         <mxCell id="FaAuMZEEyM1q7xkiohW_-79" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;fontSize=20;fontFamily=Times New Roman;" value="&lt;font&gt;Manage the categorization of contacts into groups.&lt;/font&gt;" vertex="1">
           <mxGeometry height="30" width="272.5" x="1434.75" y="1140" as="geometry" />
         </mxCell>
-        <mxCell id="UmJpqze8iKx18VfeJIik-186" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="Text" vertex="1">
-          <mxGeometry height="30" width="60" x="490" y="2069" as="geometry" />
+        <mxCell id="UmJpqze8iKx18VfeJIik-186" parent="1" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;rounded=0;" value="&lt;span style=&quot;font-family: &amp;quot;Times New Roman&amp;quot;; font-size: 13px; text-align: left;&quot;&gt;Updated account result&lt;/span&gt;" vertex="1">
+          <mxGeometry height="30" width="90" x="490" y="2080" as="geometry" />
+        </mxCell>
+        <mxCell id="kcKtOAr3aOs4H6BuMSLz-1" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;entryX=0.715;entryY=1.026;entryDx=0;entryDy=0;entryPerimeter=0;" target="UmJpqze8iKx18VfeJIik-119" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="560" y="3280" as="sourcePoint" />
+            <mxPoint x="880" y="2900" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="kcKtOAr3aOs4H6BuMSLz-2" parent="1" style="text;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=14;" value="Current group information" vertex="1">
+          <mxGeometry height="40" width="180" x="760" y="3050" as="geometry" />
+        </mxCell>
+        <mxCell id="kcKtOAr3aOs4H6BuMSLz-5" edge="1" parent="1" style="endArrow=classic;html=1;rounded=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" target="UmJpqze8iKx18VfeJIik-157" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="1800" y="3250" as="sourcePoint" />
+            <mxPoint x="1750" y="2900" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="kcKtOAr3aOs4H6BuMSLz-6" parent="1" style="text;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=15;" value="Current favorite information" vertex="1">
+          <mxGeometry height="40" width="180" x="1890" y="3090" as="geometry" />
         </mxCell>
       </root>
     </mxGraphModel>
