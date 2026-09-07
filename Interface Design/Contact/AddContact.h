@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #ifndef ADDCONTACT_H
 #define ADDCONTACT_H
 

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 #ifndef REGISTER_H
 #define REGISTER_H
 
@@ -37,7 +36,6 @@ public:
     bool show();
 };
 
-=======
 #ifndef REGISTER_H
 #define REGISTER_H
 
@@ -76,5 +74,4 @@ public:
     bool show();
 };
 
->>>>>>> ff3ea22c60233653ffdd4ef41a52ae67eba114ce
 #endif
