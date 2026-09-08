@@ -1,0 +1,57 @@
+﻿  main.cpp
+C:\bài 4\PhoneBook2\main.cpp(19,31): error C2039: 'getId': is not a member of 'Account'
+      C:\bài 4\PhoneBook2\Account.h(3,7):
+      see declaration of 'Account'
+  
+C:\bài 4\PhoneBook2\main.cpp(21,33): error C2039: 'getName': is not a member of 'Account'
+      C:\bài 4\PhoneBook2\Account.h(3,7):
+      see declaration of 'Account'
+  
+C:\bài 4\PhoneBook2\main.cpp(54,32): error C2039: 'getId': is not a member of 'Contact'
+      C:\bài 4\PhoneBook2\Contact.h(3,7):
+      see declaration of 'Contact'
+  
+C:\bài 4\PhoneBook2\main.cpp(62,32): error C2039: 'getId': is not a member of 'Contact'
+      C:\bài 4\PhoneBook2\Contact.h(3,7):
+      see declaration of 'Contact'
+  
+C:\bài 4\PhoneBook2\main.cpp(95,18): error C2039: 'getId': is not a member of 'Contact'
+      C:\bài 4\PhoneBook2\Contact.h(3,7):
+      see declaration of 'Contact'
+  
+C:\bài 4\PhoneBook2\main.cpp(94,22): error C2665: 'Contact_Group::Contact_Group': no overloaded function could convert all the argument types
+      C:\bài 4\PhoneBook2\Contact_Group.h(16,1):
+      could be 'Contact_Group::Contact_Group(Contact_Group &&)'
+          C:\bài 4\PhoneBook2\main.cpp(94,22):
+          'Contact_Group::Contact_Group(Contact_Group &&)': cannot convert argument 1 from 'int' to 'Contact_Group &&'
+              C:\bài 4\PhoneBook2\main.cpp(96,21):
+              Reason: cannot convert from 'int' to 'Contact_Group'
+      C:\bài 4\PhoneBook2\Contact_Group.h(16,1):
+      or       'Contact_Group::Contact_Group(const Contact_Group &)'
+          C:\bài 4\PhoneBook2\main.cpp(94,22):
+          'Contact_Group::Contact_Group(const Contact_Group &)': cannot convert argument 1 from 'int' to 'const Contact_Group &'
+              C:\bài 4\PhoneBook2\main.cpp(96,21):
+              Reason: cannot convert from 'int' to 'const Contact_Group'
+      C:\bài 4\PhoneBook2\main.cpp(94,22):
+      while trying to match the argument list '(int)'
+  
+C:\bài 4\PhoneBook2\main.cpp(99,18): error C2039: 'getId': is not a member of 'Contact'
+      C:\bài 4\PhoneBook2\Contact.h(3,7):
+      see declaration of 'Contact'
+  
+C:\bài 4\PhoneBook2\main.cpp(98,22): error C2665: 'Contact_Group::Contact_Group': no overloaded function could convert all the argument types
+      C:\bài 4\PhoneBook2\Contact_Group.h(16,1):
+      could be 'Contact_Group::Contact_Group(Contact_Group &&)'
+          C:\bài 4\PhoneBook2\main.cpp(98,22):
+          'Contact_Group::Contact_Group(Contact_Group &&)': cannot convert argument 1 from 'int' to 'Contact_Group &&'
+              C:\bài 4\PhoneBook2\main.cpp(100,21):
+              Reason: cannot convert from 'int' to 'Contact_Group'
+      C:\bài 4\PhoneBook2\Contact_Group.h(16,1):
+      or       'Contact_Group::Contact_Group(const Contact_Group &)'
+          C:\bài 4\PhoneBook2\main.cpp(98,22):
+          'Contact_Group::Contact_Group(const Contact_Group &)': cannot convert argument 1 from 'int' to 'const Contact_Group &'
+              C:\bài 4\PhoneBook2\main.cpp(100,21):
+              Reason: cannot convert from 'int' to 'const Contact_Group'
+      C:\bài 4\PhoneBook2\main.cpp(98,22):
+      while trying to match the argument list '(int)'
+  
