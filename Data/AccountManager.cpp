@@ -1,22 +1,21 @@
 #include "AccountManager.h"
 #include <iostream>
 #include <regex>
+#include <cctype>
 
-// Constructor
+using namespace std;
+
 AccountManager::AccountManager(DatabaseConnector& database)
     : db(database), loggedIn(false), currentUserId(0) {
 }
 
-// Kiểm tra username
-bool AccountManager::validateUsername(const std::string& username) {
-    // Username phải có từ 3 đến 30 ký tự
+bool AccountManager::validateUsername(const string& username) {
     if (username.length() < 3 || username.length() > 30) {
         return false;
     }
 
-    // Chỉ cho phép chữ cái, số và dấu _
     for (char c : username) {
-        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
+        if (!isalnum(static_cast<unsigned char>(c)) && c != '_') {
             return false;
         }
     }
@@ -24,57 +23,39 @@ bool AccountManager::validateUsername(const std::string& username) {
     return true;
 }
 
-// Kiểm tra email
-bool AccountManager::validateEmail(const std::string& email) {
-    // Kiểm tra định dạng email cơ bản
-    const std::regex pattern(
+bool AccountManager::validateEmail(const string& email) {
+    regex pattern(
         R"(^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$)"
     );
 
-    return std::regex_match(email, pattern);
+    return regex_match(email, pattern);
 }
 
-// Kiểm tra password
-bool AccountManager::validatePassword(const std::string& password) {
-    // Password phải có ít nhất 6 ký tự
-    if (password.length() < 6) {
-        return false;
-    }
-
-    return true;
+bool AccountManager::validatePassword(const string& password) {
+    return password.length() >= 6;
 }
 
-// =====================================================
-// ĐĂNG KÝ
-// =====================================================
 bool AccountManager::registerAccount(
-    const std::string& username,
-    const std::string& email,
-    const std::string& password) {
+    const string& username,
+    const string& email,
+    const string& password) {
 
-    // Kiểm tra username
     if (!validateUsername(username)) {
-        std::cerr << "[Account Error] Username không hợp lệ!"
-                  << std::endl;
+        cerr << "Username khong hop le!" << endl;
         return false;
     }
 
-    // Kiểm tra email
     if (!validateEmail(email)) {
-        std::cerr << "[Account Error] Email không hợp lệ!"
-                  << std::endl;
+        cerr << "Email khong hop le!" << endl;
         return false;
     }
 
-    // Kiểm tra password
     if (!validatePassword(password)) {
-        std::cerr << "[Account Error] Password phải có ít nhất 6 ký tự!"
-                  << std::endl;
+        cerr << "Password phai co it nhat 6 ky tu!" << endl;
         return false;
     }
 
-    // Kiểm tra username đã tồn tại chưa
-    std::string checkUsername =
+    string checkUsername =
         "SELECT id FROM accounts WHERE username = '" +
         username + "'";
 
@@ -85,18 +66,14 @@ bool AccountManager::registerAccount(
 
         if (row != nullptr) {
             db.freeResult(result);
-
-            std::cerr << "[Account Error] Username đã tồn tại!"
-                      << std::endl;
-
+            cerr << "Username da ton tai!" << endl;
             return false;
         }
 
         db.freeResult(result);
     }
 
-    // Kiểm tra email đã tồn tại chưa
-    std::string checkEmail =
+    string checkEmail =
         "SELECT id FROM accounts WHERE email = '" +
         email + "'";
 
@@ -107,48 +84,37 @@ bool AccountManager::registerAccount(
 
         if (row != nullptr) {
             db.freeResult(result);
-
-            std::cerr << "[Account Error] Email đã được sử dụng!"
-                      << std::endl;
-
+            cerr << "Email da duoc su dung!" << endl;
             return false;
         }
 
         db.freeResult(result);
     }
 
-    // Thêm tài khoản vào database
-    std::string query =
+    string query =
         "INSERT INTO accounts (username, email, password) "
         "VALUES ('" + username + "', '" +
         email + "', '" + password + "')";
 
     if (!db.executeNonQuery(query)) {
-        std::cerr << "[Account Error] Đăng ký thất bại!"
-                  << std::endl;
+        cerr << "Dang ky that bai!" << endl;
         return false;
     }
 
-    std::cout << "[Account] Đăng ký thành công!"
-              << std::endl;
-
+    cout << "Dang ky thanh cong!" << endl;
     return true;
 }
 
-// =====================================================
-// ĐĂNG NHẬP
-// =====================================================
 bool AccountManager::login(
-    const std::string& username,
-    const std::string& password) {
+    const string& username,
+    const string& password) {
 
     if (username.empty() || password.empty()) {
-        std::cerr << "[Account Error] Username và password không được để trống!"
-                  << std::endl;
+        cerr << "Username va password khong duoc de trong!" << endl;
         return false;
     }
 
-    std::string query =
+    string query =
         "SELECT id FROM accounts "
         "WHERE username = '" + username +
         "' AND password = '" + password + "'";
@@ -162,49 +128,38 @@ bool AccountManager::login(
     MYSQL_ROW row = mysql_fetch_row(result);
 
     if (row != nullptr) {
-        currentUserId = std::stoi(row[0]);
-
+        currentUserId = stoi(row[0]);
         loggedIn = true;
 
         db.freeResult(result);
 
-        std::cout << "[Account] Đăng nhập thành công!"
-                  << std::endl;
-
+        cout << "Dang nhap thanh cong!" << endl;
         return true;
     }
 
     db.freeResult(result);
 
-    std::cerr << "[Account Error] Username hoặc password không đúng!"
-              << std::endl;
-
+    cerr << "Username hoac password khong dung!" << endl;
     return false;
 }
 
-// =====================================================
-// ĐỔI MẬT KHẨU
-// =====================================================
 bool AccountManager::changePassword(
-    const std::string& oldPassword,
-    const std::string& newPassword) {
+    const string& oldPassword,
+    const string& newPassword) {
 
     if (!loggedIn) {
-        std::cerr << "[Account Error] Bạn chưa đăng nhập!"
-                  << std::endl;
+        cerr << "Ban chua dang nhap!" << endl;
         return false;
     }
 
     if (!validatePassword(newPassword)) {
-        std::cerr << "[Account Error] Password mới phải có ít nhất 6 ký tự!"
-                  << std::endl;
+        cerr << "Password moi phai co it nhat 6 ky tu!" << endl;
         return false;
     }
 
-    // Kiểm tra password cũ
-    std::string checkQuery =
+    string checkQuery =
         "SELECT id FROM accounts "
-        "WHERE id = " + std::to_string(currentUserId) +
+        "WHERE id = " + to_string(currentUserId) +
         " AND password = '" + oldPassword + "'";
 
     MYSQL_RES* result = db.executeQuery(checkQuery);
@@ -217,62 +172,44 @@ bool AccountManager::changePassword(
 
     if (row == nullptr) {
         db.freeResult(result);
-
-        std::cerr << "[Account Error] Password cũ không đúng!"
-                  << std::endl;
-
+        cerr << "Password cu khong dung!" << endl;
         return false;
     }
 
     db.freeResult(result);
 
-    // Cập nhật password mới
-    std::string updateQuery =
+    string updateQuery =
         "UPDATE accounts SET password = '" +
         newPassword +
         "' WHERE id = " +
-        std::to_string(currentUserId);
+        to_string(currentUserId);
 
     if (!db.executeNonQuery(updateQuery)) {
-        std::cerr << "[Account Error] Đổi password thất bại!"
-                  << std::endl;
+        cerr << "Doi password that bai!" << endl;
         return false;
     }
 
-    std::cout << "[Account] Đổi password thành công!"
-              << std::endl;
-
+    cout << "Doi password thanh cong!" << endl;
     return true;
 }
 
-// =====================================================
-// ĐĂNG XUẤT
-// =====================================================
 void AccountManager::logout() {
 
     if (!loggedIn) {
-        std::cout << "[Account] Hiện tại chưa đăng nhập."
-                  << std::endl;
+        cout << "Hien tai chua dang nhap." << endl;
         return;
     }
 
     loggedIn = false;
     currentUserId = 0;
 
-    std::cout << "[Account] Đăng xuất thành công!"
-              << std::endl;
+    cout << "Dang xuat thanh cong!" << endl;
 }
 
-// =====================================================
-// KIỂM TRA TRẠNG THÁI ĐĂNG NHẬP
-// =====================================================
 bool AccountManager::isLoggedIn() const {
     return loggedIn;
 }
 
-// =====================================================
-// LẤY ID USER HIỆN TẠI
-// =====================================================
 int AccountManager::getCurrentUserId() const {
     return currentUserId;
 }
