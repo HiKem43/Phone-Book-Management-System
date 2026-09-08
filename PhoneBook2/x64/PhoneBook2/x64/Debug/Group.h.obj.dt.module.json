@@ -1,0 +1,14 @@
+{
+    "version": 1,
+    "revision": 0,
+    "rules": [
+        {
+            "primary-output": "PhoneBook2\\x64\\Debug\\Group.obj",
+            "outputs": [
+                "PhoneBook2\\x64\\Debug\\Group.h.obj.dt.module.json",
+                "PhoneBook2\\x64\\Debug\\Group.h.obj.dt.d.json"
+            ],
+            "requires": []
+        }
+    ]
+}
