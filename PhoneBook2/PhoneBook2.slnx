@@ -1,7 +1,0 @@
-<Solution>
-  <Configurations>
-    <Platform Name="x64" />
-    <Platform Name="x86" />
-  </Configurations>
-  <Project Path="PhoneBook2.vcxproj" Id="cc19c71b-cb93-4c20-99f5-4a520be968f8" />
-</Solution>
