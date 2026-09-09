@@ -1,5 +1,4 @@
-#ifndef ACCOUNT_H
-#define ACCOUNT_H
+#pragma once
 #include <string>
 using namespace std;
 class Account
@@ -31,4 +30,3 @@ public:
     void setPhone(string phone);
     void setRole(string role);
 };
-#endif

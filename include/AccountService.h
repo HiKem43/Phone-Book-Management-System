@@ -1,6 +1,4 @@
-#ifndef ACCOUNT_SERVICE_H
-#define ACCOUNT_SERVICE_H
-
+#pragma once
 #include <string>
 #include "DatabaseConnector.h"
 
@@ -48,5 +46,3 @@ public:
     // Lấy ID tài khoản đang đăng nhập
     int getCurrentUserId() const;
 };
-
-#endif

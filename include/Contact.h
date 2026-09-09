@@ -1,5 +1,4 @@
-#ifndef CONTACT_H
-#define CONTACT_H
+#pragma once
 #include <string>
 using namespace std;
 class Contact
@@ -35,4 +34,3 @@ public:
     void setAddress(string address);
     void setIsFavorite(bool isFavorite);
 };
-#endif

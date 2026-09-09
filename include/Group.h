@@ -1,5 +1,4 @@
-#ifndef GROUP_H
-#define GROUP_H
+#pragma once
 #include <string>
 using namespace std;
 class Group
@@ -22,4 +21,3 @@ public:
     void setGroupName(string groupName);
     void setDescription(string description);
 };
-#endif
