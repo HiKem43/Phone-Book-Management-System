@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-#include "DatabaseConnector.h"
+#include "Account.h"
 
 using namespace std;
 
