@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build Phone Book",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "-std=c++17",
+        "main.cpp",
+        "src/*.cpp",
+        "-Iinclude",
+        "-o",
+        "main_test.exe",
+        "-lgdi32",
+        "-luser32"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run Phone Book",
+      "type": "shell",
+      "dependsOn": ["Build Phone Book"],
+      "command": "main_test.exe",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build and Run Phone Book",
+      "type": "shell",
+      "dependsOn": ["Build Phone Book"],
+      "command": "main_test.exe",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

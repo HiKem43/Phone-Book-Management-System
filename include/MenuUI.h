@@ -30,6 +30,8 @@ private:
     void showRegister();
     void showUserMenu();
     void showAdminMenu();
+    void showUsers();
+    void showReports();
     void showContacts();
     void showAddContact();
     void showEditContact();

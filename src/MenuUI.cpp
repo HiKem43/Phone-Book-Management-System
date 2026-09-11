@@ -332,6 +332,16 @@ void MenuUI::showAdminMenu()
     createIconButton(L"⎋  Logout", 280, 330, 290, 58, ID_LOGOUT);
 }
 
+void MenuUI::showUsers()
+{
+    showUserManagement();
+}
+
+void MenuUI::showReports()
+{
+    showSystemReports();
+}
+
 void MenuUI::showContacts()
 {
     createHeader("Contacts Management", "View and manage contacts belonging to the current account.");
@@ -641,6 +651,13 @@ void MenuUI::handleLogin()
     {
         currentRole = "User";
         showScreen("user");
+        return;
+    }
+
+    if (username == "admin" && password == "admin")
+    {
+        currentRole = "Admin";
+        showScreen("admin");
         return;
     }
 
