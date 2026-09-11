@@ -1,17 +1,18 @@
 #pragma once
 #include <string>
 using namespace std;
-class Group
+
+struct Group
 {
-private:
-    int group_id;
+    int id;
     int account_id;
-    string groupName;
+    string name;
     string description;
-public:
+
     Group();
     Group(int group_id, int account_id,
         string groupName, string description);
+
     int getGroupId() const;
     int getAccountId() const;
     string getGroupName() const;

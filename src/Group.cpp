@@ -1,23 +1,26 @@
 #include "Group.h"
 using namespace std;
+
 Group::Group()
 {
-    group_id = 0;
+    id = 0;
     account_id = 0;
-    groupName = "";
+    name = "";
     description = "";
 }
+
 Group::Group(int group_id, int account_id,
     string groupName, string description)
 {
-    this->group_id = group_id;
+    this->id = group_id;
     this->account_id = account_id;
-    this->groupName = groupName;
+    this->name = groupName;
     this->description = description;
 }
+
 int Group::getGroupId() const
 {
-    return group_id;
+    return id;
 }
 int Group::getAccountId() const
 {
@@ -25,7 +28,7 @@ int Group::getAccountId() const
 }
 string Group::getGroupName() const
 {
-    return groupName;
+    return name;
 }
 string Group::getDescription() const
 {
@@ -33,7 +36,7 @@ string Group::getDescription() const
 }
 void Group::setGroupId(int group_id)
 {
-    this->group_id = group_id;
+    this->id = group_id;
 }
 void Group::setAccountId(int account_id)
 {
@@ -41,7 +44,7 @@ void Group::setAccountId(int account_id)
 }
 void Group::setGroupName(string groupName)
 {
-    this->groupName = groupName;
+    this->name = groupName;
 }
 void Group::setDescription(string description)
 {

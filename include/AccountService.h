@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "Account.h"
+#include "DBManager.h"
 
 using namespace std;
 

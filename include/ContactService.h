@@ -1,17 +1,9 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "Contact.h"
 
 using namespace std;
-
-struct Contact
-{
-    int id;
-    string name;
-    string phone;
-    string email;
-    string address;
-};
 
 class ContactService
 {
@@ -27,6 +19,8 @@ public:
     static void run();
 
     static void addContact();
+    static void addContact(const Contact& contact);
+    static const vector<Contact>& getContacts();
     static void viewContacts();
     static void searchContact();
     static void editContact();

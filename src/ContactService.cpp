@@ -103,6 +103,18 @@ void ContactService::run()
     } while (choice != 0);
 }
 
+void ContactService::addContact(const Contact& contact)
+{
+    Contact newContact = contact;
+    newContact.id = nextId++;
+    contacts.push_back(newContact);
+}
+
+const vector<Contact>& ContactService::getContacts()
+{
+    return contacts;
+}
+
 void ContactService::addContact()
 {
     Contact contact;

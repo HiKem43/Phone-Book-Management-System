@@ -1,8 +1,9 @@
 #include "Contact.h"
 using namespace std;
+
 Contact::Contact()
 {
-    contact_id = 0;
+    id = 0;
     account_id = 0;
     group_id = 0;
     name = "";
@@ -11,11 +12,12 @@ Contact::Contact()
     address = "";
     isFavorite = false;
 }
+
 Contact::Contact(int contact_id, int account_id, int group_id,
     string name, string phone, string email,
     string address, bool isFavorite)
 {
-    this->contact_id = contact_id;
+    this->id = contact_id;
     this->account_id = account_id;
     this->group_id = group_id;
     this->name = name;
@@ -24,9 +26,10 @@ Contact::Contact(int contact_id, int account_id, int group_id,
     this->address = address;
     this->isFavorite = isFavorite;
 }
+
 int Contact::getContactId() const
 {
-    return contact_id;
+    return id;
 }
 int Contact::getAccountId() const
 {
@@ -58,7 +61,7 @@ bool Contact::getIsFavorite() const
 }
 void Contact::setContactId(int contact_id)
 {
-    this->contact_id = contact_id;
+    this->id = contact_id;
 }
 void Contact::setAccountId(int account_id)
 {

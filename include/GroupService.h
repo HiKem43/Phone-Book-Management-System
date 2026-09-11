@@ -1,15 +1,9 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "Group.h"
 
 using namespace std;
-
-struct Group
-{
-    int id;
-    string name;
-    string description;
-};
 
 struct ContactGroup
 {

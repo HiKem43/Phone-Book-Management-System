@@ -1,10 +1,10 @@
 #pragma once
 #include <string>
 using namespace std;
-class Contact
+
+struct Contact
 {
-private:
-    int contact_id;
+    int id;
     int account_id;
     int group_id;
     string name;
@@ -12,11 +12,12 @@ private:
     string email;
     string address;
     bool isFavorite;
-public:
+
     Contact();
     Contact(int contact_id, int account_id, int group_id,
         string name, string phone, string email,
         string address, bool isFavorite);
+
     int getContactId() const;
     int getAccountId() const;
     int getGroupId() const;

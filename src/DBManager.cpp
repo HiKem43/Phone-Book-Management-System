@@ -35,8 +35,15 @@ MYSQL* DBManager::getConn() {
     return conn; 
 }
 
-// Thực thi câu lệnh SQL cập nhật/thay đổi dữ liệu (INSERT, UPDATE, DELETE)
-bool DBManager::executeQuery(const std::string& query) {
+MYSQL_RES* DBManager::executeQuery(const std::string& query) {
+    if (mysql_query(conn, query.c_str())) {
+        std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
+        return nullptr;
+    }
+    return mysql_store_result(conn);
+}
+
+bool DBManager::executeNonQuery(const std::string& query) {
     if (mysql_query(conn, query.c_str())) {
         std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
         return false;
@@ -48,21 +55,30 @@ bool DBManager::executeQuery(const std::string& query) {
 MYSQL_RES* DBManager::fetchQuery(const std::string& query) {
     if (mysql_query(conn, query.c_str())) {
         std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
-        return NULL;
+        return nullptr;
     }
     // Tải và lưu trữ toàn bộ bộ kết quả trả về vào bộ nhớ RAM
     return mysql_store_result(conn);
 }
 
+void DBManager::freeResult(MYSQL_RES* result) {
+    if (result) {
+        mysql_free_result(result);
+    }
+}
+
 // Chuẩn hóa chuỗi để chống SQL Injection
-std::string DBManager::escapeString(const std::string& str) {
-    // Cấp phát bộ nhớ đệm an toàn (tối đa gấp 2 lần độ dài chuỗi + 1 ký tự null)
-    char escaped[str.length() * 2 + 1];
-    mysql_real_escape_string(conn, escaped, str.c_str(), str.length());
-    return std::string(escaped);
+std::string DBManager::escapeString(const std::string& str) const {
+    std::string escaped(str.length() * 2 + 1, '\0');
+    mysql_real_escape_string(conn, &escaped[0], str.c_str(), static_cast<unsigned long>(str.length()));
+    std::size_t pos = escaped.find('\0');
+    if (pos != std::string::npos) {
+        escaped.erase(pos);
+    }
+    return escaped;
 }
 
 // Trả về khóa chính (ID) tự động sinh ra gần nhất
-int DBManager::getInsertId() {
-    return (int)mysql_insert_id(conn);
+int DBManager::getInsertId() const {
+    return static_cast<int>(mysql_insert_id(conn));
 }

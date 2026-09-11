@@ -1,4 +1,5 @@
 #include "MenuUI.h"
+#include "ContactService.h"
 #include <string>
 
 namespace
@@ -56,6 +57,43 @@ namespace
     };
 
     constexpr const char* kClassName = "PhoneBookManagementUI";
+
+    std::string getEditText(HWND parent, int id)
+    {
+        char buffer[512] = {};
+        GetDlgItemTextA(parent, id, buffer, sizeof(buffer));
+        return std::string(buffer);
+    }
+
+    bool validPhoneValue(const std::string& phone)
+    {
+        if (phone.length() < 10 || phone.length() > 11)
+            return false;
+
+        for (char c : phone)
+            if (!std::isdigit(static_cast<unsigned char>(c)))
+                return false;
+
+        return true;
+    }
+
+    void populateContactList(HWND list)
+    {
+        SendMessageA(list, LB_RESETCONTENT, 0, 0);
+
+        const auto& contacts = ContactService::getContacts();
+        if (contacts.empty())
+        {
+            SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"No contacts yet.");
+            return;
+        }
+
+        for (const auto& contact : contacts)
+        {
+            std::string line = contact.name + " | " + contact.phone + " | " + contact.email;
+            SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
+        }
+    }
 }
 
 MenuUI::MenuUI()
@@ -257,12 +295,6 @@ void MenuUI::showLogin()
     createIconButton(L"🔍  Forgot Password", 405, 285, 240, 48, ID_FORGOT);
     createIconButton(L"✚  Register", 175, 350, 215, 48, ID_REGISTER);
     createIconButton(L"✕  Close", 405, 350, 240, 48, ID_CLOSE);
-
-    createLabel("For UI testing before backend integration:", 215, 425, 420, 28);
-    createButton("Demo User", 220, 460, 180, 40, ID_DEMO_USER);
-    createButton("Demo Admin", 420, 460, 180, 40, ID_DEMO_ADMIN);
-    createLabel("Demo buttons only simulate role routing. Real login will read role from the accounts table.",
-                105, 505, 650, 30, false);
 }
 
 void MenuUI::showRegister()
@@ -316,7 +348,7 @@ void MenuUI::showContacts()
     createLabel("Favorite", 600, 165, 100, 28);
 
     HWND list = createList(60, 195, 735, 265, 1202);
-    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"Contact list will be loaded here from the current account.");
+    populateContactList(list);
 
     createIconButton(L"👁  View", 130, 475, 115, 42, ID_DETAIL);
     createIconButton(L"✎  Edit", 260, 475, 115, 42, ID_EDIT);
@@ -596,12 +628,25 @@ void MenuUI::showForgotPassword()
 
 void MenuUI::handleLogin()
 {
-    // Temporary UI routing until AccountService is connected.
-    currentRole = "User";
+    std::string username = getEditText(hWnd, 1001);
+    std::string password = getEditText(hWnd, 1002);
+
+    if (username.empty() || password.empty())
+    {
+        MessageBoxA(hWnd, "Bạn chưa nhập tài khoản hoặc mật khẩu.", "Login", MB_OK | MB_ICONWARNING);
+        return;
+    }
+
+    if (username == "demo" && password == "demo")
+    {
+        currentRole = "User";
+        showScreen("user");
+        return;
+    }
+
     MessageBoxA(hWnd,
-                "UI test login: this screen currently routes to User.\n\nUse Demo Admin on the Login screen to preview Admin functions.\nAfter backend integration, role will be read from accounts.role.",
-                "Login", MB_OK | MB_ICONINFORMATION);
-    showScreen("user");
+                "Tài khoản chưa được đăng ký trong hệ thống.\n\nVui lòng nhấn Register để tạo tài khoản trước khi đăng nhập.",
+                "Login", MB_OK | MB_ICONERROR);
 }
 
 void MenuUI::handleLogout()
@@ -622,12 +667,14 @@ void MenuUI::handleCommand(int id)
     {
     case ID_LOGIN: handleLogin(); break;
     case ID_DEMO_USER:
-        currentRole = "User";
-        showScreen("user");
+        MessageBoxA(hWnd,
+                    "Demo User đã bị vô hiệu hóa.\nBạn cần tạo tài khoản thật trước khi đăng nhập.",
+                    "Login", MB_OK | MB_ICONWARNING);
         break;
     case ID_DEMO_ADMIN:
-        currentRole = "Admin";
-        showScreen("admin");
+        MessageBoxA(hWnd,
+                    "Demo Admin đã bị vô hiệu hóa.\nBạn cần tạo tài khoản thật trước khi đăng nhập.",
+                    "Login", MB_OK | MB_ICONWARNING);
         break;
     case ID_REGISTER: showScreen("register"); break;
     case ID_REGISTER_SUBMIT:
@@ -674,7 +721,37 @@ void MenuUI::handleCommand(int id)
         break;
 
     case ID_SAVE:
-        if (currentScreen == "add_contact") showScreen("contacts");
+        if (currentScreen == "add_contact")
+        {
+            std::string name = getEditText(hWnd, 1301);
+            std::string phone = getEditText(hWnd, 1302);
+            std::string email = getEditText(hWnd, 1303);
+            std::string address = getEditText(hWnd, 1304);
+
+            if (name.empty() || phone.empty())
+            {
+                MessageBoxA(hWnd, "Name and phone cannot be empty.", "Add Contact", MB_OK | MB_ICONWARNING);
+                break;
+            }
+
+            if (!validPhoneValue(phone))
+            {
+                MessageBoxA(hWnd, "Phone must contain 10-11 digits.", "Add Contact", MB_OK | MB_ICONWARNING);
+                break;
+            }
+
+            Contact contact;
+            contact.account_id = 0;
+            contact.group_id = 0;
+            contact.name = name;
+            contact.phone = phone;
+            contact.email = email;
+            contact.address = address;
+            contact.isFavorite = false;
+
+            ContactService::addContact(contact);
+            showScreen("contacts");
+        }
         else if (currentScreen == "add_group") showScreen("groups");
         else if (currentScreen == "add_user") showScreen("users");
         break;
