@@ -4,6 +4,7 @@
 
 namespace
 {
+    // Các ID dùng để xác định chức năng của từng nút trên giao diện.
     enum
     {
         ID_LOGIN = 100,
@@ -56,8 +57,10 @@ namespace
         ID_CONFIRM_RESTORE
     };
 
+    // Tên lớp cửa sổ chính của chương trình.
     constexpr const char* kClassName = "PhoneBookManagementUI";
 
+    // Lấy nội dung người dùng nhập từ một ô Edit.
     std::string getEditText(HWND parent, int id)
     {
         char buffer[512] = {};
@@ -65,6 +68,7 @@ namespace
         return std::string(buffer);
     }
 
+    // Kiểm tra số điện thoại có đúng định dạng cơ bản hay không.
     bool validPhoneValue(const std::string& phone)
     {
         if (phone.length() < 10 || phone.length() > 11)
@@ -77,6 +81,7 @@ namespace
         return true;
     }
 
+    // Hiển thị danh sách Contact lên ListBox.
     void populateContactList(HWND list)
     {
         SendMessageA(list, LB_RESETCONTENT, 0, 0);
@@ -96,6 +101,9 @@ namespace
     }
 }
 
+//  KHỞI TẠO VÀ GIẢI PHÓNG 
+
+// Khởi tạo trạng thái ban đầu của giao diện.
 MenuUI::MenuUI()
     : hWnd(nullptr), hTitleFont(nullptr), hSubtitleFont(nullptr), hNormalFont(nullptr),
       hButtonFont(nullptr), hSmallFont(nullptr), hIconFont(nullptr),
@@ -103,6 +111,7 @@ MenuUI::MenuUI()
 {
 }
 
+// Giải phóng các font khi đối tượng MenuUI bị hủy.
 MenuUI::~MenuUI()
 {
     if (hTitleFont) DeleteObject(hTitleFont);
@@ -113,6 +122,9 @@ MenuUI::~MenuUI()
     if (hIconFont) DeleteObject(hIconFont);
 }
 
+//  FONT VÀ THÀNH PHẦN GIAO DIỆN 
+
+// Tạo các loại font được sử dụng trong giao diện.
 void MenuUI::createFonts()
 {
     hTitleFont = CreateFontA(30, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE,
@@ -135,6 +147,7 @@ void MenuUI::createFonts()
                             CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_SWISS, "Segoe UI Symbol");
 }
 
+// Xóa toàn bộ control của màn hình hiện tại trước khi chuyển sang màn hình khác.
 void MenuUI::clearScreen()
 {
     for (HWND control : screenControls)
@@ -158,6 +171,7 @@ void MenuUI::clearScreen()
                  RDW_INVALIDATE | RDW_ERASE | RDW_UPDATENOW | RDW_ALLCHILDREN);
 }
 
+// Tạo Label dùng để hiển thị chữ trên giao diện.
 void MenuUI::createLabel(const char* text, int x, int y, int w, int h, bool title)
 {
     HWND label = CreateWindowA("STATIC", text, WS_CHILD | WS_VISIBLE,
@@ -166,6 +180,7 @@ void MenuUI::createLabel(const char* text, int x, int y, int w, int h, bool titl
     screenControls.push_back(label);
 }
 
+// Tạo Button chức năng.
 HWND MenuUI::createButton(const char* text, int x, int y, int w, int h, int id)
 {
     HWND button = CreateWindowA("BUTTON", text,
@@ -177,6 +192,7 @@ HWND MenuUI::createButton(const char* text, int x, int y, int w, int h, int id)
     return button;
 }
 
+// Tạo Button sử dụng biểu tượng.
 HWND MenuUI::createIconButton(const wchar_t* text, int x, int y, int w, int h, int id)
 {
     HWND button = CreateWindowW(L"BUTTON", text,
@@ -188,6 +204,7 @@ HWND MenuUI::createIconButton(const wchar_t* text, int x, int y, int w, int h, i
     return button;
 }
 
+// Tạo ô nhập dữ liệu.
 HWND MenuUI::createEdit(const char* text, int x, int y, int w, int h, int id, bool password)
 {
     DWORD style = WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL;
@@ -200,6 +217,7 @@ HWND MenuUI::createEdit(const char* text, int x, int y, int w, int h, int id, bo
     return edit;
 }
 
+// Tạo danh sách hiển thị dữ liệu.
 HWND MenuUI::createList(int x, int y, int w, int h, int id)
 {
     HWND list = CreateWindowA("LISTBOX", "", WS_CHILD | WS_VISIBLE | WS_BORDER | LBS_NOTIFY,
@@ -210,6 +228,7 @@ HWND MenuUI::createList(int x, int y, int w, int h, int id)
     return list;
 }
 
+// Tạo ComboBox để lựa chọn dữ liệu.
 HWND MenuUI::createCombo(const char* text, int x, int y, int w, int h, int id)
 {
     HWND combo = CreateWindowA("COMBOBOX", "", WS_CHILD | WS_VISIBLE | WS_BORDER | CBS_DROPDOWNLIST,
@@ -225,17 +244,20 @@ HWND MenuUI::createCombo(const char* text, int x, int y, int w, int h, int id)
     return combo;
 }
 
+// Tạo nút Back dùng chung cho các màn hình.
 void MenuUI::createBackButton(int id)
 {
     createButton("< Back", 30, 535, 110, 40, id);
 }
 
+// Tạo Header gồm tiêu đề và tiêu đề phụ.
 void MenuUI::createHeader(const char* title, const char* subtitle)
 {
     createLabel(title, 30, 22, 680, 42, true);
     if (subtitle) createLabel(subtitle, 32, 67, 760, 32, false);
 }
 
+// Hiển thị vai trò hiện tại của tài khoản.
 void MenuUI::createRoleBadge(const char* role)
 {
     std::string text = "Current role: ";
@@ -243,6 +265,9 @@ void MenuUI::createRoleBadge(const char* role)
     createLabel(text.c_str(), 650, 25, 160, 30, false);
 }
 
+//  ĐIỀU HƯỚNG GIAO DIỆN 
+
+// Chuyển đổi giữa các màn hình của hệ thống.
 void MenuUI::showScreen(const std::string& screen)
 {
     previousScreen = currentScreen;
@@ -281,6 +306,9 @@ void MenuUI::showScreen(const std::string& screen)
     UpdateWindow(hWnd);
 }
 
+//  CÁC GIAO DIỆN 
+
+// Giao diện đăng nhập.
 void MenuUI::showLogin()
 {
     createLabel("PHONE BOOK MANAGEMENT SYSTEM", 115, 45, 620, 50, true);
@@ -297,6 +325,7 @@ void MenuUI::showLogin()
     createIconButton(L"✕  Close", 405, 350, 240, 48, ID_CLOSE);
 }
 
+// Giao diện đăng ký tài khoản.
 void MenuUI::showRegister()
 {
     createHeader("Register An Account", "Create a new account before using the system.");
@@ -310,6 +339,7 @@ void MenuUI::showRegister()
     createBackButton();
 }
 
+// Menu chính dành cho User.
 void MenuUI::showUserMenu()
 {
     createHeader("User Menu", "Manage your personal contacts, groups and account.");
@@ -321,6 +351,7 @@ void MenuUI::showUserMenu()
     createIconButton(L"⎋  Logout", 280, 330, 290, 58, ID_LOGOUT);
 }
 
+// Menu chính dành cho Admin.
 void MenuUI::showAdminMenu()
 {
     createHeader("Admin Menu", "Administration functions are available only to Admin accounts.");
@@ -332,16 +363,7 @@ void MenuUI::showAdminMenu()
     createIconButton(L"⎋  Logout", 280, 330, 290, 58, ID_LOGOUT);
 }
 
-void MenuUI::showUsers()
-{
-    showUserManagement();
-}
-
-void MenuUI::showReports()
-{
-    showSystemReports();
-}
-
+// Giao diện quản lý Contact.
 void MenuUI::showContacts()
 {
     createHeader("Contacts Management", "View and manage contacts belonging to the current account.");
@@ -367,6 +389,7 @@ void MenuUI::showContacts()
     createBackButton();
 }
 
+// Giao diện thêm Contact.
 void MenuUI::showAddContact()
 {
     createHeader("Add Contact", "Enter contact information and save it to the current account.");
@@ -380,6 +403,7 @@ void MenuUI::showAddContact()
     createButton("Cancel", 500, 425, 170, 45, ID_CANCEL);
 }
 
+// Giao diện chỉnh sửa Contact.
 void MenuUI::showEditContact()
 {
     createHeader("Edit Contact", "Update the selected contact.");
@@ -393,6 +417,7 @@ void MenuUI::showEditContact()
     createButton("Cancel", 500, 425, 170, 45, ID_CANCEL);
 }
 
+// Giao diện xác nhận xóa Contact.
 void MenuUI::showDeleteContact()
 {
     createHeader("Delete Contact", "Confirmation is required before removing data.");
@@ -404,6 +429,7 @@ void MenuUI::showDeleteContact()
     createBackButton();
 }
 
+// Giao diện xem chi tiết Contact.
 void MenuUI::showContactDetail()
 {
     createHeader("Contact Details", "View information of the selected contact.");
@@ -417,6 +443,7 @@ void MenuUI::showContactDetail()
     createBackButton();
 }
 
+// Giao diện tìm kiếm Contact.
 void MenuUI::showSearchContacts()
 {
     createHeader("Search Contacts", "Search by name, phone or email.");
@@ -430,6 +457,7 @@ void MenuUI::showSearchContacts()
     createBackButton();
 }
 
+// Giao diện quản lý Group.
 void MenuUI::showGroups()
 {
     createHeader("Group Management", "Create, view, edit, delete, search and assign contacts to groups.");
@@ -448,6 +476,7 @@ void MenuUI::showGroups()
     createBackButton();
 }
 
+// Giao diện thêm Group.
 void MenuUI::showAddGroup()
 {
     createHeader("Add Group", "Create a group for organizing contacts.");
@@ -457,6 +486,7 @@ void MenuUI::showAddGroup()
     createButton("Cancel", 510, 285, 170, 45, ID_CANCEL);
 }
 
+// Giao diện chỉnh sửa Group.
 void MenuUI::showEditGroup()
 {
     createHeader("Edit Group", "Update the selected group.");
@@ -466,6 +496,7 @@ void MenuUI::showEditGroup()
     createButton("Cancel", 510, 285, 170, 45, ID_CANCEL);
 }
 
+// Giao diện xác nhận xóa Group.
 void MenuUI::showDeleteGroup()
 {
     createHeader("Delete Group", "Confirm before deleting a group.");
@@ -475,6 +506,7 @@ void MenuUI::showDeleteGroup()
     createBackButton();
 }
 
+// Giao diện xem chi tiết Group.
 void MenuUI::showGroupDetail()
 {
     createHeader("Group Details", "View the selected group and its contacts.");
@@ -486,6 +518,7 @@ void MenuUI::showGroupDetail()
     createBackButton();
 }
 
+// Giao diện gán Contact vào Group.
 void MenuUI::showAssignContact()
 {
     createHeader("Assign Contact to Group", "Select a contact and a group.");
@@ -495,6 +528,7 @@ void MenuUI::showAssignContact()
     createButton("Cancel", 510, 285, 170, 45, ID_CANCEL);
 }
 
+// Giao diện quản lý Favorites.
 void MenuUI::showFavorites()
 {
     createHeader("Favorite Management", "View contacts marked as favorite.");
@@ -508,6 +542,7 @@ void MenuUI::showFavorites()
     createBackButton();
 }
 
+// Giao diện quản lý tài khoản User.
 void MenuUI::showAccount()
 {
     createHeader("Manage User Account", "View and update the current account.");
@@ -520,6 +555,7 @@ void MenuUI::showAccount()
     createBackButton();
 }
 
+// Giao diện thay đổi mật khẩu.
 void MenuUI::showChangePassword()
 {
     createHeader("Change Password", "Change the password of the current account.");
@@ -530,6 +566,7 @@ void MenuUI::showChangePassword()
     createButton("Cancel", 510, 320, 170, 45, ID_CANCEL);
 }
 
+// Giao diện quản lý User dành cho Admin.
 void MenuUI::showUserManagement()
 {
     createHeader("User Management", "Admin-only management of User accounts.");
@@ -550,6 +587,7 @@ void MenuUI::showUserManagement()
     createBackButton(ID_ADMIN_MENU);
 }
 
+// Giao diện thêm User.
 void MenuUI::showAddUser()
 {
     createHeader("Add User", "Admin creates a new account.");
@@ -563,6 +601,7 @@ void MenuUI::showAddUser()
     createButton("Cancel", 500, 415, 170, 45, ID_CANCEL);
 }
 
+// Giao diện chỉnh sửa User.
 void MenuUI::showEditUser()
 {
     createHeader("Edit User", "Admin updates an existing account.");
@@ -575,6 +614,7 @@ void MenuUI::showEditUser()
     createButton("Cancel", 500, 390, 170, 45, ID_CANCEL);
 }
 
+// Giao diện xác nhận xóa User.
 void MenuUI::showDeleteUser()
 {
     createHeader("Delete User", "Admin confirmation is required before deletion.");
@@ -584,6 +624,7 @@ void MenuUI::showDeleteUser()
     createBackButton();
 }
 
+// Giao diện báo cáo thống kê hệ thống.
 void MenuUI::showSystemReports()
 {
     createHeader("View System Reports", "Summary information for Admin.");
@@ -600,6 +641,7 @@ void MenuUI::showSystemReports()
     createBackButton(ID_ADMIN_MENU);
 }
 
+// Giao diện Backup Data.
 void MenuUI::showBackup()
 {
     createHeader("Backup Data", "Create and manage system backup files.");
@@ -615,6 +657,7 @@ void MenuUI::showBackup()
     createBackButton(ID_ADMIN_MENU);
 }
 
+// Giao diện Data Recovery.
 void MenuUI::showRecovery()
 {
     createHeader("Data Recovery", "Restore system data from a valid backup file.");
@@ -626,6 +669,7 @@ void MenuUI::showRecovery()
     createBackButton(ID_ADMIN_MENU);
 }
 
+// Giao diện Forgot Password.
 void MenuUI::showForgotPassword()
 {
     createHeader("Forgot Password", "Password recovery interface.");
@@ -636,6 +680,9 @@ void MenuUI::showForgotPassword()
     createBackButton();
 }
 
+//  XỬ LÝ SỰ KIỆN 
+
+// Xử lý thao tác đăng nhập ở mức giao diện.
 void MenuUI::handleLogin()
 {
     std::string username = getEditText(hWnd, 1001);
@@ -643,7 +690,7 @@ void MenuUI::handleLogin()
 
     if (username.empty() || password.empty())
     {
-        MessageBoxA(hWnd, "Bạn chưa nhập tài khoản hoặc mật khẩu.", "Login", MB_OK | MB_ICONWARNING);
+        MessageBoxA(hWnd, "Please enter your username and password.", "Login", MB_OK | MB_ICONWARNING);
         return;
     }
 
@@ -662,22 +709,25 @@ void MenuUI::handleLogin()
     }
 
     MessageBoxA(hWnd,
-                "Tài khoản chưa được đăng ký trong hệ thống.\n\nVui lòng nhấn Register để tạo tài khoản trước khi đăng nhập.",
+                "This account is not registered in the system.\n\nPlease click Register to create an account before logging in.",
                 "Login", MB_OK | MB_ICONERROR);
 }
 
+// Xử lý đăng xuất và quay về màn hình Login.
 void MenuUI::handleLogout()
 {
     currentRole.clear();
     showScreen("login");
 }
 
+// Xử lý đóng ứng dụng.
 void MenuUI::handleClose()
 {
     if (MessageBoxA(hWnd, "Are you sure you want to close the application?", "Close", MB_YESNO | MB_ICONQUESTION) == IDYES)
         DestroyWindow(hWnd);
 }
 
+// Điều phối các thao tác khi người dùng nhấn nút.
 void MenuUI::handleCommand(int id)
 {
     switch (id)
@@ -685,12 +735,12 @@ void MenuUI::handleCommand(int id)
     case ID_LOGIN: handleLogin(); break;
     case ID_DEMO_USER:
         MessageBoxA(hWnd,
-                    "Demo User đã bị vô hiệu hóa.\nBạn cần tạo tài khoản thật trước khi đăng nhập.",
+                    "Demo User has been disabled.\nPlease create a real account before logging in.",
                     "Login", MB_OK | MB_ICONWARNING);
         break;
     case ID_DEMO_ADMIN:
         MessageBoxA(hWnd,
-                    "Demo Admin đã bị vô hiệu hóa.\nBạn cần tạo tài khoản thật trước khi đăng nhập.",
+                    "Demo Admin has been disabled.\nPlease create a real account before logging in.",
                     "Login", MB_OK | MB_ICONWARNING);
         break;
     case ID_REGISTER: showScreen("register"); break;
@@ -772,6 +822,7 @@ void MenuUI::handleCommand(int id)
         else if (currentScreen == "add_group") showScreen("groups");
         else if (currentScreen == "add_user") showScreen("users");
         break;
+
     case ID_UPDATE:
         if (currentScreen == "edit_contact") showScreen("contacts");
         else if (currentScreen == "edit_group") showScreen("groups");
@@ -785,6 +836,7 @@ void MenuUI::handleCommand(int id)
         else if (currentScreen == "account")
             MessageBoxA(hWnd, "Profile update UI is ready. Update logic will be connected later.", "Account", MB_OK);
         break;
+
     case ID_CANCEL:
         if (currentScreen == "add_contact" || currentScreen == "edit_contact" || currentScreen == "delete_contact" || currentScreen == "detail_contact" || currentScreen == "search") showScreen("contacts");
         else if (currentScreen == "add_group" || currentScreen == "edit_group" || currentScreen == "delete_group" || currentScreen == "group_detail" || currentScreen == "assign_contact") showScreen("groups");
@@ -844,6 +896,7 @@ void MenuUI::handleCommand(int id)
         break;
     case ID_REFRESH: MessageBoxA(hWnd, "Report refresh UI is ready. Data query will be connected later.", "Reports", MB_OK); break;
 
+    // Xử lý nút Back và điều hướng về màn hình tương ứng.
     case ID_BACK:
     case 900:
         if (currentScreen == "register" || currentScreen == "forgot") showScreen("login");
@@ -857,6 +910,9 @@ void MenuUI::handleCommand(int id)
     }
 }
 
+//  WINDOWS MESSAGE 
+
+// Xử lý các message của cửa sổ Win32.
 LRESULT CALLBACK MenuUI::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     MenuUI* ui = reinterpret_cast<MenuUI*>(GetWindowLongPtrA(hwnd, GWLP_USERDATA));
@@ -891,6 +947,9 @@ LRESULT CALLBACK MenuUI::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
     return DefWindowProcA(hwnd, uMsg, wParam, lParam);
 }
 
+//  KHỞI ĐỘNG CHƯƠNG TRÌNH 
+
+// Tạo cửa sổ chính và chạy message loop của Win32.
 int MenuUI::run()
 {
     HINSTANCE instance = GetModuleHandleA(nullptr);
@@ -926,5 +985,6 @@ int MenuUI::run()
         TranslateMessage(&msg);
         DispatchMessageA(&msg);
     }
+
     return (int)msg.wParam;
 }
