@@ -61,7 +61,9 @@ bool AccountService::validatePassword(const string& password) {
 bool AccountService::registerAccount(
     const string& username,
     const string& email,
-    const string& password) {
+    const string& password,
+    const string& fullName,
+    const string& phone) {
 
     // Kiểm tra username
     if (!validateUsername(username)) {
@@ -83,9 +85,15 @@ bool AccountService::registerAccount(
 
 
     // Kiểm tra username đã tồn tại
+    const string escapedUsername = db.escapeString(username);
+    const string escapedEmail = db.escapeString(email);
+    const string escapedPassword = db.escapeString(password);
+    const string escapedFullName = db.escapeString(fullName);
+    const string escapedPhone = db.escapeString(phone);
+
     string checkUsername =
-        "SELECT id FROM accounts WHERE username = '" +
-        username + "'";
+        "SELECT account_id FROM Accounts WHERE username = '" +
+        escapedUsername + "'";
 
     MYSQL_RES* result = db.executeQuery(checkUsername);
 
@@ -106,8 +114,8 @@ bool AccountService::registerAccount(
 
     // Kiểm tra email đã tồn tại
     string checkEmail =
-        "SELECT id FROM accounts WHERE email = '" +
-        email + "'";
+        "SELECT account_id FROM Accounts WHERE email = '" +
+        escapedEmail + "'";
 
     result = db.executeQuery(checkEmail);
 
@@ -128,11 +136,13 @@ bool AccountService::registerAccount(
 
     // Thêm tài khoản vào database
     string query =
-        "INSERT INTO accounts (username, email, password) "
+        "INSERT INTO Accounts (username, email, password, fullname, phone, role) "
         "VALUES ('" +
-        username + "', '" +
-        email + "', '" +
-        password + "')";
+        escapedUsername + "', '" +
+        escapedEmail + "', SHA2('" +
+        escapedPassword + "', 256), '" +
+        escapedFullName + "', '" +
+        escapedPhone + "', 'User')";
 
     if (!db.executeNonQuery(query)) {
         cerr << "Dang ky that bai!" << endl;
@@ -162,12 +172,12 @@ bool AccountService::login(
 
     // Tìm tài khoản
     string query =
-        "SELECT id FROM accounts "
+        "SELECT account_id FROM Accounts "
         "WHERE username = '" +
-        username +
-        "' AND password = '" +
-        password +
-        "'";
+        db.escapeString(username) +
+        "' AND password = SHA2('" +
+        db.escapeString(password) +
+        "', 256)";
 
     MYSQL_RES* result = db.executeQuery(query);
 
@@ -227,12 +237,12 @@ bool AccountService::changePassword(
 
     // Kiểm tra password cũ
     string checkQuery =
-        "SELECT id FROM accounts "
+        "SELECT account_id FROM Accounts "
         "WHERE id = " +
         to_string(currentUserId) +
-        " AND password = '" +
-        oldPassword +
-        "'";
+        " AND password = SHA2('" +
+        db.escapeString(oldPassword) +
+        "', 256)";
 
     MYSQL_RES* result = db.executeQuery(checkQuery);
 
@@ -257,9 +267,9 @@ bool AccountService::changePassword(
 
     // Cập nhật password mới
     string updateQuery =
-        "UPDATE accounts SET password = '" +
-        newPassword +
-        "' WHERE id = " +
+        "UPDATE Accounts SET password = SHA2('" +
+        db.escapeString(newPassword) +
+        "', 256) WHERE account_id = " +
         to_string(currentUserId);
 
     if (!db.executeNonQuery(updateQuery)) {

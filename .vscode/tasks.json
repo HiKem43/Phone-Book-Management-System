@@ -10,13 +10,19 @@
         "main.cpp",
         "src/*.cpp",
         "-Iinclude",
+        "-IC:/Program Files/MySQL/MySQL Server 8.4/include",
+        "-LC:/Program Files/MySQL/MySQL Server 8.4/lib",
         "-o",
         "main_test.exe",
+        "-lmysql",
         "-lgdi32",
         "-luser32"
       ],
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "C:/Program Files/MySQL/MySQL Server 8.4/lib;C:/Program Files/MySQL/MySQL Server 8.4/bin;${env:PATH}"
+        }
       },
       "problemMatcher": []
     },
@@ -26,7 +32,10 @@
       "dependsOn": ["Build Phone Book"],
       "command": "main_test.exe",
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "C:/Program Files/MySQL/MySQL Server 8.4/lib;C:/Program Files/MySQL/MySQL Server 8.4/bin;${env:PATH}"
+        }
       },
       "problemMatcher": []
     },
@@ -36,7 +45,10 @@
       "dependsOn": ["Build Phone Book"],
       "command": "main_test.exe",
       "options": {
-        "cwd": "${workspaceFolder}"
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "PATH": "C:/Program Files/MySQL/MySQL Server 8.4/lib;C:/Program Files/MySQL/MySQL Server 8.4/bin;${env:PATH}"
+        }
       },
       "problemMatcher": []
     }

@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <string>
 #include <vector>
+#include "AccountService.h"
 
 // Lớp giao diện chính của hệ thống.
 class MenuUI
@@ -21,6 +22,7 @@ private:
     std::string previousScreen;
     std::string currentRole;
     std::vector<HWND> screenControls;
+    AccountService accountService;
 
     // Xử lý sự kiện của cửa sổ.
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);

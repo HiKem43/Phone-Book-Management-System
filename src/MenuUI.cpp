@@ -1,5 +1,7 @@
 #include "MenuUI.h"
 #include "ContactService.h"
+#include "DBManager.h"
+#include <cstdlib>
 #include <string>
 
 namespace
@@ -107,7 +109,7 @@ namespace
 MenuUI::MenuUI()
     : hWnd(nullptr), hTitleFont(nullptr), hSubtitleFont(nullptr), hNormalFont(nullptr),
       hButtonFont(nullptr), hSmallFont(nullptr), hIconFont(nullptr),
-      currentScreen("login"), previousScreen("login"), currentRole("")
+    currentScreen("login"), previousScreen("login"), currentRole(""), accountService(db)
 {
 }
 
@@ -694,17 +696,10 @@ void MenuUI::handleLogin()
         return;
     }
 
-    if (username == "demo" && password == "demo")
+    if (accountService.login(username, password))
     {
         currentRole = "User";
         showScreen("user");
-        return;
-    }
-
-    if (username == "admin" && password == "admin")
-    {
-        currentRole = "Admin";
-        showScreen("admin");
         return;
     }
 
@@ -745,8 +740,41 @@ void MenuUI::handleCommand(int id)
         break;
     case ID_REGISTER: showScreen("register"); break;
     case ID_REGISTER_SUBMIT:
-        MessageBoxA(hWnd, "Register UI is ready. Account creation will be connected later.", "Register", MB_OK);
+    {
+        std::string username = getEditText(hWnd, 1101);
+        std::string password = getEditText(hWnd, 1102);
+        std::string fullName = getEditText(hWnd, 1103);
+        std::string email = getEditText(hWnd, 1104);
+        std::string phone = getEditText(hWnd, 1105);
+
+        if (username.length() < 3 || username.length() > 30)
+        {
+            MessageBoxA(hWnd, "Username must contain 3-30 characters.", "Register", MB_OK | MB_ICONWARNING);
+            break;
+        }
+
+        if (password.length() < 6)
+        {
+            MessageBoxA(hWnd, "Password must contain at least 6 characters.", "Register", MB_OK | MB_ICONWARNING);
+            break;
+        }
+
+        if (email.empty() || fullName.empty() || phone.empty())
+        {
+            MessageBoxA(hWnd, "Please complete all registration fields.", "Register", MB_OK | MB_ICONWARNING);
+            break;
+        }
+
+        if (!accountService.registerAccount(username, email, password, fullName, phone))
+        {
+            MessageBoxA(hWnd, "Registration failed. Check the database connection and account information.", "Register", MB_OK | MB_ICONERROR);
+            break;
+        }
+
+        MessageBoxA(hWnd, "Registration successful. You can now log in.", "Register", MB_OK | MB_ICONINFORMATION);
+        showScreen("login");
         break;
+    }
     case ID_REGISTER_LOGIN: showScreen("login"); break;
     case ID_FORGOT: showScreen("forgot"); break;
     case ID_CLOSE: handleClose(); break;
@@ -952,6 +980,22 @@ LRESULT CALLBACK MenuUI::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM 
 // Tạo cửa sổ chính và chạy message loop của Win32.
 int MenuUI::run()
 {
+    const char* host = std::getenv("PHONEBOOK_DB_HOST");
+    const char* user = std::getenv("PHONEBOOK_DB_USER");
+    const char* password = std::getenv("PHONEBOOK_DB_PASSWORD");
+    const char* database = std::getenv("PHONEBOOK_DB_NAME");
+
+    if (!db.connect(host ? host : "127.0.0.1",
+                    user ? user : "root",
+                    password ? password : "",
+                    database ? database : "phonebook"))
+    {
+        MessageBoxA(nullptr,
+                    "Cannot connect to MySQL. Set PHONEBOOK_DB_HOST, PHONEBOOK_DB_USER, PHONEBOOK_DB_PASSWORD and PHONEBOOK_DB_NAME, then run again.",
+                    "Database connection error", MB_OK | MB_ICONERROR);
+        return 1;
+    }
+
     HINSTANCE instance = GetModuleHandleA(nullptr);
     createFonts();
 

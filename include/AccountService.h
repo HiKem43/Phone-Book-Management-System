@@ -23,7 +23,9 @@ public:
     bool registerAccount(
         const string& username,
         const string& email,
-        const string& password
+        const string& password,
+        const string& fullName,
+        const string& phone
     );
 
     // Đăng nhập

@@ -4,7 +4,12 @@
 
 #if __has_include(<mysql/mysql.h>)
 #include <mysql/mysql.h>
+#define PHONEBOOK_HAS_MYSQL 1
+#elif __has_include(<mysql.h>)
+#include <mysql.h>
+#define PHONEBOOK_HAS_MYSQL 1
 #else
+#define PHONEBOOK_HAS_MYSQL 0
 struct MYSQL { int dummy; };
 struct MYSQL_RES { int dummy; };
 using MYSQL_ROW = char**;
