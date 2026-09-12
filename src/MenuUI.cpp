@@ -703,6 +703,14 @@ void MenuUI::handleLogin()
         return;
     }
 
+    if (!db.isConnected())
+    {
+        MessageBoxA(hWnd,
+                    "Cannot login because MySQL is not connected. Start MySQL Server and try again.",
+                    "Database connection", MB_OK | MB_ICONWARNING);
+        return;
+    }
+
     MessageBoxA(hWnd,
                 "This account is not registered in the system.\n\nPlease click Register to create an account before logging in.",
                 "Login", MB_OK | MB_ICONERROR);
@@ -991,9 +999,8 @@ int MenuUI::run()
                     database ? database : "phonebook"))
     {
         MessageBoxA(nullptr,
-                    "Cannot connect to MySQL. Set PHONEBOOK_DB_HOST, PHONEBOOK_DB_USER, PHONEBOOK_DB_PASSWORD and PHONEBOOK_DB_NAME, then run again.",
-                    "Database connection error", MB_OK | MB_ICONERROR);
-        return 1;
+                    "Cannot connect to MySQL. The interface will still open, but register/login require MySQL to be running.",
+                    "Database connection warning", MB_OK | MB_ICONWARNING);
     }
 
     HINSTANCE instance = GetModuleHandleA(nullptr);

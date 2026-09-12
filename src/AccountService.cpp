@@ -65,6 +65,11 @@ bool AccountService::registerAccount(
     const string& fullName,
     const string& phone) {
 
+    if (!db.isConnected()) {
+        cerr << "Database is not connected!" << endl;
+        return false;
+    }
+
     // Kiểm tra username
     if (!validateUsername(username)) {
         cerr << "Username khong hop le!" << endl;
@@ -162,6 +167,11 @@ bool AccountService::registerAccount(
 bool AccountService::login(
     const string& username,
     const string& password) {
+
+    if (!db.isConnected()) {
+        cerr << "Database is not connected!" << endl;
+        return false;
+    }
 
     if (username.empty() || password.empty()) {
         cerr << "Username va password khong duoc de trong!"

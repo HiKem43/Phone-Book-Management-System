@@ -36,6 +36,7 @@ public:
     virtual int getInsertId() const = 0;
     virtual std::string escapeString(const std::string& str) const = 0;
     virtual MYSQL* getConn() = 0;
+    virtual bool isConnected() const = 0;
 };
 
 /**
@@ -48,6 +49,7 @@ public:
 class DBManager : public DatabaseConnector {
 private:
     MYSQL* conn; // Con trỏ quản lý đối tượng phiên kết nối MySQL C API
+    bool connected;
 
 public:
 
@@ -93,6 +95,7 @@ public:
 
     // Lấy ID tự động tăng (AUTO_INCREMENT) vừa sinh ra từ câu lệnh INSERT gần nhất
     int getInsertId() const override;
+    bool isConnected() const override;
 };
 
 // Khai báo đối tượng toàn cục để tái sử dụng 1 kết nối duy nhất trong toàn bộ ứng dụng

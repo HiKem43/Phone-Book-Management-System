@@ -7,6 +7,7 @@ DBManager db;
 // Hàm khởi tạo: Chuẩn bị cấu trúc kết nối MySQL
 DBManager::DBManager() {
     conn = mysql_init(NULL); // Khởi tạo con trỏ MYSQL nội bộ
+    connected = false;
 }
 
 // Hàm hủy: Giải phóng tài nguyên kết nối
@@ -22,10 +23,12 @@ bool DBManager::connect(const std::string& host, const std::string& user, const 
     if (mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, NULL, 0)) {
         // Cấu hình bảng mã UTF-8 để hỗ trợ tiếng Việt hoàn chỉnh
         mysql_set_character_set(conn, "utf8mb4");
+        connected = true;
         return true;
     } else {
         // In thông báo lỗi ra luồng cerr nếu kết nối thất bại
         std::cerr << "Connection Error: " << mysql_error(conn) << std::endl;
+        connected = false;
         return false;
     }
 }
@@ -36,6 +39,11 @@ MYSQL* DBManager::getConn() {
 }
 
 MYSQL_RES* DBManager::executeQuery(const std::string& query) {
+    if (!connected) {
+        std::cerr << "Query Error: database is not connected." << std::endl;
+        return nullptr;
+    }
+
     if (mysql_query(conn, query.c_str())) {
         std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
         return nullptr;
@@ -44,6 +52,11 @@ MYSQL_RES* DBManager::executeQuery(const std::string& query) {
 }
 
 bool DBManager::executeNonQuery(const std::string& query) {
+    if (!connected) {
+        std::cerr << "Query Error: database is not connected." << std::endl;
+        return false;
+    }
+
     if (mysql_query(conn, query.c_str())) {
         std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
         return false;
@@ -53,6 +66,11 @@ bool DBManager::executeNonQuery(const std::string& query) {
 
 // Thực thi câu lệnh SQL truy xuất/lấy dữ liệu (SELECT)
 MYSQL_RES* DBManager::fetchQuery(const std::string& query) {
+    if (!connected) {
+        std::cerr << "Query Error: database is not connected." << std::endl;
+        return nullptr;
+    }
+
     if (mysql_query(conn, query.c_str())) {
         std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
         return nullptr;
@@ -69,6 +87,10 @@ void DBManager::freeResult(MYSQL_RES* result) {
 
 // Chuẩn hóa chuỗi để chống SQL Injection
 std::string DBManager::escapeString(const std::string& str) const {
+    if (!connected || conn == nullptr) {
+        return str;
+    }
+
     std::string escaped(str.length() * 2 + 1, '\0');
     mysql_real_escape_string(conn, &escaped[0], str.c_str(), static_cast<unsigned long>(str.length()));
     std::size_t pos = escaped.find('\0');
@@ -81,4 +103,8 @@ std::string DBManager::escapeString(const std::string& str) const {
 // Trả về khóa chính (ID) tự động sinh ra gần nhất
 int DBManager::getInsertId() const {
     return static_cast<int>(mysql_insert_id(conn));
+}
+
+bool DBManager::isConnected() const {
+    return connected;
 }
