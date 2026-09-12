@@ -19,18 +19,69 @@ DBManager::~DBManager() {
 
 // Mở kết nối đến máy chủ MySQL
 bool DBManager::connect(const std::string& host, const std::string& user, const std::string& password, const std::string& database, unsigned int port) {
-    // Gọi hàm kết nối của MySQL C API
-    if (mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(), database.c_str(), port, NULL, 0)) {
-        // Cấu hình bảng mã UTF-8 để hỗ trợ tiếng Việt hoàn chỉnh
-        mysql_set_character_set(conn, "utf8mb4");
-        connected = true;
-        return true;
-    } else {
-        // In thông báo lỗi ra luồng cerr nếu kết nối thất bại
-        std::cerr << "Connection Error: " << mysql_error(conn) << std::endl;
+    if (connectToServer(host, user, password, database, port)) {
+        return initializeSchema();
+    }
+
+    // The server may be running while the project database has not been created yet.
+    if (!connectToServer(host, user, password, "", port)) {
         connected = false;
         return false;
     }
+
+    const std::string createDatabase =
+        "CREATE DATABASE IF NOT EXISTS `" + escapeString(database) +
+        "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
+    if (!executeNonQuery(createDatabase)) {
+        connected = false;
+        return false;
+    }
+
+    if (!connectToServer(host, user, password, database, port)) {
+        connected = false;
+        return false;
+    }
+
+    return initializeSchema();
+}
+
+bool DBManager::connectToServer(const std::string& host, const std::string& user, const std::string& password, const std::string& database, unsigned int port) {
+    if (conn) {
+        mysql_close(conn);
+    }
+    conn = mysql_init(nullptr);
+    if (!conn || !mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(),
+                                     database.empty() ? nullptr : database.c_str(), port, nullptr, 0)) {
+        if (conn) {
+            std::cerr << "Connection Error: " << mysql_error(conn) << std::endl;
+        }
+        connected = false;
+        return false;
+    }
+
+    mysql_set_character_set(conn, "utf8mb4");
+    connected = true;
+    return true;
+}
+
+bool DBManager::initializeSchema() {
+    const char* accountsTable =
+        "CREATE TABLE IF NOT EXISTS Accounts ("
+        "account_id INT AUTO_INCREMENT PRIMARY KEY,"
+        "username VARCHAR(50) NOT NULL UNIQUE,"
+        "password VARCHAR(255) NOT NULL,"
+        "fullname VARCHAR(100) NOT NULL,"
+        "email VARCHAR(100) NULL UNIQUE,"
+        "phone VARCHAR(15) NULL,"
+        "role VARCHAR(20) NOT NULL DEFAULT 'User'"
+        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
+    if (!executeNonQuery(accountsTable)) {
+        connected = false;
+        return false;
+    }
+
+    return true;
 }
 
 // Trả về con trỏ kết nối

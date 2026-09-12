@@ -67,6 +67,12 @@ public:
      */
     bool connect(const std::string& host, const std::string& user, const std::string& password, const std::string& database, unsigned int port = 3306);
 
+private:
+    bool connectToServer(const std::string& host, const std::string& user, const std::string& password, const std::string& database, unsigned int port);
+    bool initializeSchema();
+
+public:
+
     // Truy xuất trực tiếp con trỏ kết nối MySQL
     MYSQL* getConn() override;
 
