@@ -321,10 +321,10 @@ void MenuUI::showLogin()
     createLabel("Password", 205, 225, 120, 30);
     createEdit("", 335, 220, 305, 35, 1002, true);
 
-    createIconButton(L"🔐  Login", 175, 285, 215, 48, ID_LOGIN);
-    createIconButton(L"🔍  Forgot Password", 405, 285, 240, 48, ID_FORGOT);
-    createIconButton(L"✚  Register", 175, 350, 215, 48, ID_REGISTER);
-    createIconButton(L"✕  Close", 405, 350, 240, 48, ID_CLOSE);
+    createIconButton(L"[>]  Login", 175, 285, 215, 48, ID_LOGIN);
+    createIconButton(L"[?]  Forgot Password", 405, 285, 240, 48, ID_FORGOT);
+    createIconButton(L"[+]  Register", 175, 350, 215, 48, ID_REGISTER);
+    createIconButton(L"[X]  Close", 405, 350, 240, 48, ID_CLOSE);
 }
 
 // Giao diện đăng ký tài khoản.
@@ -346,11 +346,11 @@ void MenuUI::showUserMenu()
 {
     createHeader("User Menu", "Manage your personal contacts, groups and account.");
     createRoleBadge("User");
-    createIconButton(L"☎  Contacts Management", 115, 130, 290, 58, ID_CONTACTS);
-    createIconButton(L"▦  Group Management", 445, 130, 290, 58, ID_GROUPS);
-    createIconButton(L"♥  Favorite Management", 115, 215, 290, 58, ID_FAVORITES);
-    createIconButton(L"⚙  Manage User Account", 445, 215, 290, 58, ID_ACCOUNT);
-    createIconButton(L"⎋  Logout", 280, 330, 290, 58, ID_LOGOUT);
+    createIconButton(L"[C]  Contacts Management", 115, 130, 290, 58, ID_CONTACTS);
+    createIconButton(L"[G]  Group Management", 445, 130, 290, 58, ID_GROUPS);
+    createIconButton(L"[*]  Favorite Management", 115, 215, 290, 58, ID_FAVORITES);
+    createIconButton(L"[U]  Manage User Account", 445, 215, 290, 58, ID_ACCOUNT);
+    createIconButton(L"[L]  Logout", 280, 330, 290, 58, ID_LOGOUT);
 }
 
 // Menu chính dành cho Admin.
@@ -358,11 +358,11 @@ void MenuUI::showAdminMenu()
 {
     createHeader("Admin Menu", "Administration functions are available only to Admin accounts.");
     createRoleBadge("Admin");
-    createIconButton(L"♙  User Management", 105, 125, 300, 58, ID_USER_MGMT);
-    createIconButton(L"▤  View System Reports", 445, 125, 300, 58, ID_REPORTS);
-    createIconButton(L"▣  Backup Data", 105, 210, 300, 58, ID_BACKUP);
-    createIconButton(L"↻  Data Recovery", 445, 210, 300, 58, ID_RECOVERY);
-    createIconButton(L"⎋  Logout", 280, 330, 290, 58, ID_LOGOUT);
+    createIconButton(L"[U]  User Management", 105, 125, 300, 58, ID_USER_MGMT);
+    createIconButton(L"[R]  View System Reports", 445, 125, 300, 58, ID_REPORTS);
+    createIconButton(L"[B]  Backup Data", 105, 210, 300, 58, ID_BACKUP);
+    createIconButton(L"[R]  Data Recovery", 445, 210, 300, 58, ID_RECOVERY);
+    createIconButton(L"[L]  Logout", 280, 330, 290, 58, ID_LOGOUT);
 }
 
 // Giao diện quản lý Contact.
@@ -370,10 +370,10 @@ void MenuUI::showContacts()
 {
     createHeader("Contacts Management", "View and manage contacts belonging to the current account.");
     createEdit("Search contacts...", 60, 105, 390, 38, 1201);
-    createIconButton(L"🔍", 455, 105, 55, 38, ID_SEARCH);
+    createIconButton(L"[S]", 455, 105, 55, 38, ID_SEARCH);
     createButton("+ Add Contact", 525, 105, 145, 38, ID_ADD);
-    createIconButton(L"♥", 685, 105, 50, 38, ID_FAVORITE_TOGGLE);
-    createIconButton(L"↕", 745, 105, 50, 38, ID_SORT);
+    createIconButton(L"[*]", 685, 105, 50, 38, ID_FAVORITE_TOGGLE);
+    createIconButton(L"[=]", 745, 105, 50, 38, ID_SORT);
 
     createLabel("Name", 60, 165, 120, 28);
     createLabel("Phone", 180, 165, 120, 28);
@@ -384,10 +384,10 @@ void MenuUI::showContacts()
     HWND list = createList(60, 195, 735, 265, 1202);
     populateContactList(list);
 
-    createIconButton(L"👁  View", 130, 475, 115, 42, ID_DETAIL);
-    createIconButton(L"✎  Edit", 260, 475, 115, 42, ID_EDIT);
-    createIconButton(L"🗑  Delete", 390, 475, 125, 42, ID_DELETE);
-    createIconButton(L"♥  Favorite", 530, 475, 135, 42, ID_FAVORITE_TOGGLE);
+    createIconButton(L"[V]  View", 130, 475, 115, 42, ID_DETAIL);
+    createIconButton(L"[E]  Edit", 260, 475, 115, 42, ID_EDIT);
+    createIconButton(L"[D]  Delete", 390, 475, 125, 42, ID_DELETE);
+    createIconButton(L"[*]  Favorite", 530, 475, 135, 42, ID_FAVORITE_TOGGLE);
     createBackButton();
 }
 
@@ -400,7 +400,7 @@ void MenuUI::showAddContact()
     createLabel("Email", 150, 215, 120, 30); createEdit("", 290, 210, 400, 35, 1303);
     createLabel("Address", 150, 265, 120, 30); createEdit("", 290, 260, 400, 35, 1304);
     createLabel("Group", 150, 315, 120, 30); createCombo("No Group", 290, 310, 400, 35, 1305);
-    createLabel("Favorite", 150, 365, 120, 30); createIconButton(L"♥  Mark as Favorite", 290, 360, 190, 38, ID_FAVORITE_TOGGLE);
+    createLabel("Favorite", 150, 365, 120, 30); createIconButton(L"[*]  Mark as Favorite", 290, 360, 190, 38, ID_FAVORITE_TOGGLE);
     createButton("Save", 300, 425, 170, 45, ID_SAVE);
     createButton("Cancel", 500, 425, 170, 45, ID_CANCEL);
 }
@@ -414,7 +414,7 @@ void MenuUI::showEditContact()
     createLabel("Email", 150, 215, 120, 30); createEdit("", 290, 210, 400, 35, 1403);
     createLabel("Address", 150, 265, 120, 30); createEdit("", 290, 260, 400, 35, 1404);
     createLabel("Group", 150, 315, 120, 30); createCombo("No Group", 290, 310, 400, 35, 1405);
-    createLabel("Favorite", 150, 365, 120, 30); createIconButton(L"♥  Favorite", 290, 360, 160, 38, ID_FAVORITE_TOGGLE);
+    createLabel("Favorite", 150, 365, 120, 30); createIconButton(L"[*]  Favorite", 290, 360, 160, 38, ID_FAVORITE_TOGGLE);
     createButton("Update", 300, 425, 170, 45, ID_UPDATE);
     createButton("Cancel", 500, 425, 170, 45, ID_CANCEL);
 }
@@ -426,7 +426,7 @@ void MenuUI::showDeleteContact()
     createLabel("Selected Contact", 220, 145, 180, 30);
     createLabel("Contact name will appear here", 400, 145, 270, 30);
     createLabel("Are you sure you want to delete this contact?", 180, 220, 500, 40, true);
-    createIconButton(L"🗑  Confirm Delete", 245, 300, 190, 48, ID_DELETE);
+    createIconButton(L"[D]  Confirm Delete", 245, 300, 190, 48, ID_DELETE);
     createButton("Cancel", 455, 300, 180, 48, ID_CANCEL);
     createBackButton();
 }
@@ -450,7 +450,7 @@ void MenuUI::showSearchContacts()
 {
     createHeader("Search Contacts", "Search by name, phone or email.");
     createEdit("Enter keyword...", 65, 110, 400, 38, 1501);
-    createIconButton(L"🔍", 470, 110, 55, 38, ID_SEARCH);
+    createIconButton(L"[S]", 470, 110, 55, 38, ID_SEARCH);
     createButton("Filter", 540, 110, 105, 38, ID_FILTER);
     createButton("Sort", 660, 110, 105, 38, ID_SORT);
     createLabel("Search Result", 65, 165, 200, 30, true);
@@ -464,8 +464,8 @@ void MenuUI::showGroups()
 {
     createHeader("Group Management", "Create, view, edit, delete, search and assign contacts to groups.");
     createButton("+ Add Group", 535, 105, 120, 40, ID_ADD_GROUP);
-    createIconButton(L"🔍", 665, 105, 55, 40, ID_SEARCH_GROUP);
-    createIconButton(L"🗑", 730, 105, 55, 40, ID_DELETE_GROUP);
+    createIconButton(L"[S]", 665, 105, 55, 40, ID_SEARCH_GROUP);
+    createIconButton(L"[D]", 730, 105, 55, 40, ID_DELETE_GROUP);
     createLabel("Group Name", 70, 165, 180, 30);
     createLabel("Description", 250, 165, 300, 30);
     createLabel("Contacts", 550, 165, 150, 30);
@@ -503,7 +503,7 @@ void MenuUI::showDeleteGroup()
 {
     createHeader("Delete Group", "Confirm before deleting a group.");
     createLabel("Are you sure you want to delete this group?", 190, 190, 500, 40, true);
-    createIconButton(L"🗑  Confirm Delete", 250, 270, 180, 48, ID_DELETE_GROUP);
+    createIconButton(L"[D]  Confirm Delete", 250, 270, 180, 48, ID_DELETE_GROUP);
     createButton("Cancel", 450, 270, 180, 48, ID_CANCEL);
     createBackButton();
 }
@@ -534,13 +534,13 @@ void MenuUI::showAssignContact()
 void MenuUI::showFavorites()
 {
     createHeader("Favorite Management", "View contacts marked as favorite.");
-    createIconButton(L"♥  Favorites", 650, 105, 140, 38, ID_FAVORITE_TOGGLE);
+    createIconButton(L"[*]  Favorites", 650, 105, 140, 38, ID_FAVORITE_TOGGLE);
     createLabel("Name", 80, 160, 180, 30);
     createLabel("Phone", 260, 160, 180, 30);
     createLabel("Email", 440, 160, 200, 30);
     HWND list = createList(80, 190, 680, 260, 2001);
     SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"Favorite contacts will be displayed here.");
-    createIconButton(L"♥  Remove Favorite", 300, 475, 180, 45, ID_FAVORITE_TOGGLE);
+    createIconButton(L"[*]  Remove Favorite", 300, 475, 180, 45, ID_FAVORITE_TOGGLE);
     createBackButton();
 }
 
@@ -573,9 +573,9 @@ void MenuUI::showUserManagement()
 {
     createHeader("User Management", "Admin-only management of User accounts.");
     createEdit("Search users...", 70, 105, 350, 38, 2301);
-    createIconButton(L"🔍", 430, 105, 55, 38, ID_SEARCH);
+    createIconButton(L"[S]", 430, 105, 55, 38, ID_SEARCH);
     createButton("+ Add User", 500, 105, 120, 38, ID_ADD_USER);
-    createIconButton(L"🗑", 635, 105, 55, 38, ID_DELETE_USER);
+    createIconButton(L"[D]", 635, 105, 55, 38, ID_DELETE_USER);
     createLabel("ID", 60, 165, 50, 30);
     createLabel("Username", 110, 165, 120, 30);
     createLabel("Full Name", 230, 165, 150, 30);
@@ -585,7 +585,7 @@ void MenuUI::showUserManagement()
     HWND list = createList(60, 195, 730, 255, 2302);
     SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"User accounts will be loaded here.");
     createButton("Edit", 250, 475, 110, 42, ID_EDIT_USER);
-    createIconButton(L"🗑  Delete", 390, 475, 120, 42, ID_DELETE_USER);
+    createIconButton(L"[D]  Delete", 390, 475, 120, 42, ID_DELETE_USER);
     createBackButton(ID_ADMIN_MENU);
 }
 
@@ -621,7 +621,7 @@ void MenuUI::showDeleteUser()
 {
     createHeader("Delete User", "Admin confirmation is required before deletion.");
     createLabel("Are you sure you want to delete this User account?", 170, 195, 540, 40, true);
-    createIconButton(L"🗑  Confirm Delete", 245, 275, 180, 48, ID_DELETE_USER);
+    createIconButton(L"[D]  Confirm Delete", 245, 275, 180, 48, ID_DELETE_USER);
     createButton("Cancel", 455, 275, 180, 48, ID_CANCEL);
     createBackButton();
 }
@@ -647,7 +647,7 @@ void MenuUI::showSystemReports()
 void MenuUI::showBackup()
 {
     createHeader("Backup Data", "Create and manage system backup files.");
-    createIconButton(L"▣  Create Backup", 290, 105, 210, 48, ID_CREATE_BACKUP);
+    createIconButton(L"[B]  Create Backup", 290, 105, 210, 48, ID_CREATE_BACKUP);
     createLabel("Backup History", 70, 180, 220, 30, true);
     createLabel("File name", 70, 215, 250, 30);
     createLabel("Created time", 320, 215, 180, 30);
@@ -666,7 +666,7 @@ void MenuUI::showRecovery()
     createLabel("Backup File", 130, 145, 130, 30); createEdit("", 270, 140, 390, 35, 2801);
     createButton("Choose File", 675, 140, 120, 35, ID_BROWSE);
     createLabel("Selected file will be validated before Restore.", 130, 200, 620, 30);
-    createIconButton(L"↻  Restore", 290, 270, 180, 48, ID_RESTORE);
+    createIconButton(L"[R]  Restore", 290, 270, 180, 48, ID_RESTORE);
     createButton("Cancel", 500, 270, 180, 48, ID_CANCEL);
     createBackButton(ID_ADMIN_MENU);
 }
@@ -706,13 +706,13 @@ void MenuUI::handleLogin()
     if (!db.isConnected())
     {
         MessageBoxA(hWnd,
-                    "Cannot login because MySQL is not connected. Start MySQL Server and try again.",
+                    "Cannot login because local storage is not available. Check the application folder permissions and try again.",
                     "Database connection", MB_OK | MB_ICONWARNING);
         return;
     }
 
     MessageBoxA(hWnd,
-                "This account is not registered in the system.\n\nPlease click Register to create an account before logging in.",
+            "Username or password is incorrect. Make sure you use the same username and password entered during registration.",
                 "Login", MB_OK | MB_ICONERROR);
 }
 
@@ -998,8 +998,12 @@ int MenuUI::run()
                     password ? password : "",
                     database ? database : "phonebook"))
     {
+        std::string message =
+            "Cannot open local storage. Check the application folder permissions and try again.\n\n"
+            "The application stores account data in a local file and does not require MySQL.";
+
         MessageBoxA(nullptr,
-                    "Cannot connect to MySQL. The interface will still open, but register/login require MySQL to be running.",
+                    message.c_str(),
                     "Database connection warning", MB_OK | MB_ICONWARNING);
     }
 

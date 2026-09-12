@@ -1,133 +1,272 @@
 #include "DBManager.h"
-#include <iostream>
 
-// Khai báo thực thể CSDL toàn cục duy nhất
+#include <algorithm>
+#include <cctype>
+#include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <regex>
+#include <sstream>
+#include <string>
+#include <utility>
+#include <vector>
+
 DBManager db;
 
-// Hàm khởi tạo: Chuẩn bị cấu trúc kết nối MySQL
-DBManager::DBManager() {
-    conn = mysql_init(NULL); // Khởi tạo con trỏ MYSQL nội bộ
-    connected = false;
+namespace {
+std::string toLower(std::string value) {
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    return value;
 }
 
-// Hàm hủy: Giải phóng tài nguyên kết nối
+std::string trim(const std::string& value) {
+    const auto begin = value.find_first_not_of(" \t\r\n");
+    if (begin == std::string::npos) {
+        return "";
+    }
+    const auto end = value.find_last_not_of(" \t\r\n");
+    return value.substr(begin, end - begin + 1);
+}
+
+std::string extractQuotedValue(const std::string& input, const std::string& key) {
+    const std::regex pattern(key + R"(\s*=\s*'([^']*)')", std::regex::icase);
+    std::smatch match;
+    if (std::regex_search(input, match, pattern)) {
+        return match[1].str();
+    }
+    return "";
+}
+
+std::string extractSha2Value(const std::string& input, const std::string& key) {
+    const std::regex pattern(key + R"(\s*=\s*SHA2\(\s*'([^']*)'\s*,\s*\d+\s*\))", std::regex::icase);
+    std::smatch match;
+    if (std::regex_search(input, match, pattern)) {
+        return match[1].str();
+    }
+    return "";
+}
+
+std::string extractNumericValue(const std::string& input, const std::string& key) {
+    const std::regex pattern(key + R"(\s*=\s*(\d+))", std::regex::icase);
+    std::smatch match;
+    if (std::regex_search(input, match, pattern)) {
+        return match[1].str();
+    }
+    return "";
+}
+
+std::string sanitizeForStorage(const std::string& value) {
+    std::string result = value;
+    std::replace(result.begin(), result.end(), '\'', ' ');
+    return trim(result);
+}
+}
+
+DBManager::DBManager() : conn(mysql_init(nullptr)), connected(false), lastInsertId(0) {}
+
 DBManager::~DBManager() {
-    if (conn) {
-        mysql_close(conn); // Đóng kết nối CSDL an toàn khi chương trình kết thúc
-    }
-}
-
-// Mở kết nối đến máy chủ MySQL
-bool DBManager::connect(const std::string& host, const std::string& user, const std::string& password, const std::string& database, unsigned int port) {
-    if (connectToServer(host, user, password, database, port)) {
-        return initializeSchema();
-    }
-
-    // The server may be running while the project database has not been created yet.
-    if (!connectToServer(host, user, password, "", port)) {
-        connected = false;
-        return false;
-    }
-
-    const std::string createDatabase =
-        "CREATE DATABASE IF NOT EXISTS `" + escapeString(database) +
-        "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci";
-    if (!executeNonQuery(createDatabase)) {
-        connected = false;
-        return false;
-    }
-
-    if (!connectToServer(host, user, password, database, port)) {
-        connected = false;
-        return false;
-    }
-
-    return initializeSchema();
-}
-
-bool DBManager::connectToServer(const std::string& host, const std::string& user, const std::string& password, const std::string& database, unsigned int port) {
     if (conn) {
         mysql_close(conn);
     }
-    conn = mysql_init(nullptr);
-    if (!conn || !mysql_real_connect(conn, host.c_str(), user.c_str(), password.c_str(),
-                                     database.empty() ? nullptr : database.c_str(), port, nullptr, 0)) {
-        if (conn) {
-            std::cerr << "Connection Error: " << mysql_error(conn) << std::endl;
-        }
-        connected = false;
-        return false;
-    }
+}
 
-    mysql_set_character_set(conn, "utf8mb4");
+bool DBManager::connect(const std::string&, const std::string&, const std::string&, const std::string& database, unsigned int) {
+    storageFile = database.empty() ? "phonebook_accounts.db" : database + "_accounts.db";
+    connected = true;
+    loadAccounts();
+    return initializeSchema();
+}
+
+bool DBManager::connectToServer(const std::string&, const std::string&, const std::string&, const std::string&, unsigned int) {
     connected = true;
     return true;
 }
 
 bool DBManager::initializeSchema() {
-    const char* accountsTable =
-        "CREATE TABLE IF NOT EXISTS Accounts ("
-        "account_id INT AUTO_INCREMENT PRIMARY KEY,"
-        "username VARCHAR(50) NOT NULL UNIQUE,"
-        "password VARCHAR(255) NOT NULL,"
-        "fullname VARCHAR(100) NOT NULL,"
-        "email VARCHAR(100) NULL UNIQUE,"
-        "phone VARCHAR(15) NULL,"
-        "role VARCHAR(20) NOT NULL DEFAULT 'User'"
-        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-
-    if (!executeNonQuery(accountsTable)) {
-        connected = false;
-        return false;
-    }
-
+    connected = true;
     return true;
 }
 
-// Trả về con trỏ kết nối
-MYSQL* DBManager::getConn() { 
-    return conn; 
+bool DBManager::loadAccounts() {
+    accountRecords.clear();
+    std::ifstream input(storageFile);
+    if (!input) {
+        return true;
+    }
+
+    AccountRecord record;
+    while (input >> record.id
+                 >> std::quoted(record.username)
+                 >> std::quoted(record.email)
+                 >> std::quoted(record.password)
+                 >> std::quoted(record.fullname)
+                 >> std::quoted(record.phone)
+                 >> std::quoted(record.role)) {
+        accountRecords.push_back(record);
+    }
+
+    if (!accountRecords.empty()) {
+        lastInsertId = accountRecords.back().id;
+    }
+    return true;
+}
+
+bool DBManager::saveAccounts() const {
+    if (storageFile.empty()) {
+        return false;
+    }
+
+    std::ofstream output(storageFile, std::ios::trunc);
+    if (!output) {
+        return false;
+    }
+
+    for (const auto& record : accountRecords) {
+        output << record.id << ' '
+               << std::quoted(record.username) << ' '
+               << std::quoted(record.email) << ' '
+               << std::quoted(record.password) << ' '
+               << std::quoted(record.fullname) << ' '
+               << std::quoted(record.phone) << ' '
+               << std::quoted(record.role) << '\n';
+    }
+    return true;
+}
+
+MYSQL* DBManager::getConn() {
+    return conn;
 }
 
 MYSQL_RES* DBManager::executeQuery(const std::string& query) {
     if (!connected) {
-        std::cerr << "Query Error: database is not connected." << std::endl;
         return nullptr;
     }
 
-    if (mysql_query(conn, query.c_str())) {
-        std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
+    std::string cleaned = trim(query);
+    if (cleaned.empty()) {
         return nullptr;
     }
-    return mysql_store_result(conn);
+
+    auto* result = new MYSQL_RES();
+    std::string lower = toLower(cleaned);
+
+    if (lower.find("select") == 0 && lower.find("from accounts") != std::string::npos) {
+        const std::size_t wherePosition = lower.find("where");
+        const std::string whereClause = wherePosition != std::string::npos ? cleaned.substr(wherePosition) : "";
+        bool matchFound = false;
+
+        for (const auto& record : accountRecords) {
+            bool match = true;
+            const std::string username = extractQuotedValue(whereClause, "username");
+            const std::string email = extractQuotedValue(whereClause, "email");
+            const std::string password = extractSha2Value(whereClause, "password");
+            const std::string accountId = extractNumericValue(whereClause, "account_id");
+            const std::string id = extractNumericValue(whereClause, "id");
+
+            if (!username.empty() && record.username != username) {
+                match = false;
+            }
+            if (!email.empty() && record.email != email) {
+                match = false;
+            }
+            if (!password.empty() && record.password != password) {
+                match = false;
+            }
+            if (!accountId.empty() && std::to_string(record.id) != accountId) {
+                match = false;
+            }
+            if (!id.empty() && std::to_string(record.id) != id) {
+                match = false;
+            }
+
+            if (match) {
+                result->rows.push_back({std::to_string(record.id)});
+                matchFound = true;
+            }
+        }
+
+        if (!matchFound) {
+            delete result;
+            return nullptr;
+        }
+
+        return result;
+    }
+
+    delete result;
+    return nullptr;
 }
 
 bool DBManager::executeNonQuery(const std::string& query) {
     if (!connected) {
-        std::cerr << "Query Error: database is not connected." << std::endl;
         return false;
     }
 
-    if (mysql_query(conn, query.c_str())) {
-        std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
+    std::string cleaned = trim(query);
+    if (cleaned.empty()) {
         return false;
     }
-    return true;
+
+    std::string lower = toLower(cleaned);
+    if (lower.find("create table") != std::string::npos || lower.find("create database") != std::string::npos) {
+        return true;
+    }
+
+    if (lower.find("insert into accounts") != std::string::npos) {
+        const std::regex valuesPattern(
+            R"(values\s*\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*SHA2\(\s*'([^']*)'\s*,\s*256\s*\)\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*\))",
+            std::regex::icase);
+        std::smatch valuesMatch;
+        if (!std::regex_search(cleaned, valuesMatch, valuesPattern)) {
+            return false;
+        }
+
+        const std::string username = valuesMatch[1].str();
+        const std::string email = valuesMatch[2].str();
+        const std::string password = valuesMatch[3].str();
+        const std::string fullName = valuesMatch[4].str();
+        const std::string phone = valuesMatch[5].str();
+        const std::string role = valuesMatch[6].str();
+
+        if (username.empty() && email.empty()) {
+            return false;
+        }
+
+        AccountRecord record;
+        record.id = static_cast<int>(accountRecords.size()) + 1;
+        record.username = sanitizeForStorage(username);
+        record.email = sanitizeForStorage(email);
+        record.password = sanitizeForStorage(password);
+        record.fullname = sanitizeForStorage(fullName);
+        record.phone = sanitizeForStorage(phone);
+        record.role = sanitizeForStorage(role.empty() ? "User" : role);
+        accountRecords.push_back(record);
+        lastInsertId = record.id;
+        return saveAccounts();
+    }
+
+    if (lower.find("update accounts") != std::string::npos) {
+        const std::string password = extractSha2Value(cleaned, "password");
+        const std::string accountId = extractNumericValue(cleaned, "account_id");
+        const std::string id = extractNumericValue(cleaned, "id");
+
+        const int targetId = std::stoi(accountId.empty() ? id : accountId);
+        for (auto& record : accountRecords) {
+            if (record.id == targetId) {
+                record.password = sanitizeForStorage(password);
+                return saveAccounts();
+            }
+        }
+        return false;
+    }
+
+    return false;
 }
 
-// Thực thi câu lệnh SQL truy xuất/lấy dữ liệu (SELECT)
 MYSQL_RES* DBManager::fetchQuery(const std::string& query) {
-    if (!connected) {
-        std::cerr << "Query Error: database is not connected." << std::endl;
-        return nullptr;
-    }
-
-    if (mysql_query(conn, query.c_str())) {
-        std::cerr << "Query Error: " << mysql_error(conn) << std::endl;
-        return nullptr;
-    }
-    // Tải và lưu trữ toàn bộ bộ kết quả trả về vào bộ nhớ RAM
-    return mysql_store_result(conn);
+    return executeQuery(query);
 }
 
 void DBManager::freeResult(MYSQL_RES* result) {
@@ -136,26 +275,26 @@ void DBManager::freeResult(MYSQL_RES* result) {
     }
 }
 
-// Chuẩn hóa chuỗi để chống SQL Injection
 std::string DBManager::escapeString(const std::string& str) const {
-    if (!connected || conn == nullptr) {
-        return str;
+    std::string output;
+    output.reserve(str.size() * 2);
+    for (char ch : str) {
+        if (ch == '\'') {
+            output.push_back('\\');
+        }
+        output.push_back(ch);
     }
-
-    std::string escaped(str.length() * 2 + 1, '\0');
-    mysql_real_escape_string(conn, &escaped[0], str.c_str(), static_cast<unsigned long>(str.length()));
-    std::size_t pos = escaped.find('\0');
-    if (pos != std::string::npos) {
-        escaped.erase(pos);
-    }
-    return escaped;
+    return output;
 }
 
-// Trả về khóa chính (ID) tự động sinh ra gần nhất
 int DBManager::getInsertId() const {
-    return static_cast<int>(mysql_insert_id(conn));
+    return lastInsertId;
 }
 
 bool DBManager::isConnected() const {
     return connected;
+}
+
+std::string DBManager::getStorageFile() const {
+    return storageFile;
 }

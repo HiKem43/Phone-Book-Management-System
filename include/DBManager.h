@@ -1,30 +1,89 @@
 #pragma once
-#include <string>
-#include <algorithm>
 
-#if __has_include(<mysql/mysql.h>)
-#include <mysql/mysql.h>
-#define PHONEBOOK_HAS_MYSQL 1
-#elif __has_include(<mysql.h>)
-#include <mysql.h>
-#define PHONEBOOK_HAS_MYSQL 1
-#else
-#define PHONEBOOK_HAS_MYSQL 0
-struct MYSQL { int dummy; };
-struct MYSQL_RES { int dummy; };
+#include <algorithm>
+#include <string>
+#include <vector>
+
+struct MYSQL {
+    int dummy = 0;
+};
+
+struct MYSQL_RES {
+    std::vector<std::vector<std::string>> rows;
+    std::vector<std::string> columns;
+    std::size_t currentRow = 0;
+    std::vector<std::vector<char*>> rowStorage;
+};
+
 using MYSQL_ROW = char**;
-inline MYSQL* mysql_init(MYSQL*) { return nullptr; }
-inline MYSQL* mysql_real_connect(MYSQL*, const char*, const char*, const char*, const char*, unsigned int, const char*, unsigned long) { return nullptr; }
+
+inline MYSQL* mysql_init(MYSQL*) { return new MYSQL(); }
+inline MYSQL* mysql_real_connect(MYSQL*, const char*, const char*, const char*, const char*, unsigned int, const char*, unsigned long) { return new MYSQL(); }
 inline int mysql_set_character_set(MYSQL*, const char*) { return 0; }
-inline void mysql_close(MYSQL*) {}
+inline void mysql_close(MYSQL* conn) { delete conn; }
 inline int mysql_query(MYSQL*, const char*) { return 0; }
 inline MYSQL_RES* mysql_store_result(MYSQL*) { return nullptr; }
-inline MYSQL_ROW mysql_fetch_row(MYSQL_RES*) { return nullptr; }
-inline void mysql_free_result(MYSQL_RES*) {}
+inline MYSQL_ROW mysql_fetch_row(MYSQL_RES* result) {
+    if (result == nullptr || result->currentRow >= result->rows.size()) {
+        return nullptr;
+    }
+
+    const auto& row = result->rows[result->currentRow++];
+    std::vector<char*> values(row.size(), nullptr);
+    result->rowStorage.push_back(values);
+
+    for (std::size_t i = 0; i < row.size(); ++i) {
+        const auto& value = row[i];
+        char* copy = new char[value.size() + 1];
+        std::copy(value.begin(), value.end(), copy);
+        copy[value.size()] = '\0';
+        result->rowStorage.back()[i] = copy;
+    }
+
+    MYSQL_ROW out = new char*[row.size() + 1];
+    for (std::size_t i = 0; i < row.size(); ++i) {
+        out[i] = result->rowStorage.back()[i];
+    }
+    out[row.size()] = nullptr;
+    return out;
+}
+inline void mysql_free_result(MYSQL_RES* result) {
+    if (!result) {
+        return;
+    }
+
+    for (auto& row : result->rowStorage) {
+        for (char* value : row) {
+            delete[] value;
+        }
+    }
+
+    delete result;
+}
 inline char* mysql_error(MYSQL*) { return nullptr; }
 inline unsigned long long mysql_insert_id(MYSQL*) { return 0; }
-inline unsigned long mysql_real_escape_string(MYSQL*, char* to, const char* from, unsigned long length) { if (length == 0) { if (to) *to = '\0'; return 0; } std::string s(from, length); std::copy(s.begin(), s.end(), to); to[s.size()] = '\0'; return static_cast<unsigned long>(s.size()); }
-#endif
+inline unsigned long mysql_real_escape_string(MYSQL*, char* to, const char* from, unsigned long length) {
+    if (length == 0) {
+        if (to) *to = '\0';
+        return 0;
+    }
+
+    std::string escaped(from, length);
+    std::string output;
+    output.reserve(escaped.size() * 2);
+    for (char ch : escaped) {
+        if (ch == '\'') {
+            output += '\\';
+        }
+        output += ch;
+    }
+
+    if (to) {
+        std::copy(output.begin(), output.end(), to);
+        to[output.size()] = '\0';
+    }
+    return static_cast<unsigned long>(output.size());
+}
 
 class DatabaseConnector {
 public:
@@ -48,8 +107,25 @@ public:
  */
 class DBManager : public DatabaseConnector {
 private:
-    MYSQL* conn; // Con trỏ quản lý đối tượng phiên kết nối MySQL C API
+    MYSQL* conn;
     bool connected;
+    int lastInsertId;
+    std::string storageFile;
+
+    struct AccountRecord {
+        int id = 0;
+        std::string username;
+        std::string email;
+        std::string password;
+        std::string fullname;
+        std::string phone;
+        std::string role;
+    };
+
+    std::vector<AccountRecord> accountRecords;
+
+    bool loadAccounts();
+    bool saveAccounts() const;
 
 public:
 
@@ -102,6 +178,7 @@ public:
     // Lấy ID tự động tăng (AUTO_INCREMENT) vừa sinh ra từ câu lệnh INSERT gần nhất
     int getInsertId() const override;
     bool isConnected() const override;
+    std::string getStorageFile() const;
 };
 
 // Khai báo đối tượng toàn cục để tái sử dụng 1 kết nối duy nhất trong toàn bộ ứng dụng
