@@ -5,22 +5,26 @@
 
 using namespace std;
 
+// =====================================================
+// KHỞI TẠO (CONSTRUCTOR)
+// =====================================================
 
-// Constructor
+// Khởi tạo AccountService liên kết với cơ sở dữ liệu
 AccountService::AccountService(DatabaseConnector& database)
     : db(database), loggedIn(false), currentUserId(0) {
 }
 
+// =====================================================
+// HÀM KIỂM TRA DỮ LIỆU (VALIDATION)
+// =====================================================
 
-// Kiểm tra username
+// Kiểm tra định dạng username (từ 3-30 ký tự, chỉ gồm chữ cái, chữ số và dấu _)
 bool AccountService::validateUsername(const string& username) {
 
-    // Username phải từ 3 đến 30 ký tự
     if (username.length() < 3 || username.length() > 30) {
         return false;
     }
 
-    // Chỉ cho phép chữ cái, số và dấu _
     for (char c : username) {
         if (!isalnum(static_cast<unsigned char>(c)) && c != '_') {
             return false;
@@ -30,8 +34,7 @@ bool AccountService::validateUsername(const string& username) {
     return true;
 }
 
-
-// Kiểm tra email
+// Kiểm tra định dạng email theo mẫu regex
 bool AccountService::validateEmail(const string& email) {
 
     regex pattern(
@@ -41,11 +44,9 @@ bool AccountService::validateEmail(const string& email) {
     return regex_match(email, pattern);
 }
 
-
-// Kiểm tra password
+// Kiểm tra mật khẩu (độ dài tối thiểu 6 ký tự)
 bool AccountService::validatePassword(const string& password) {
 
-    // Password phải có ít nhất 6 ký tự
     if (password.length() < 6) {
         return false;
     }
@@ -53,11 +54,11 @@ bool AccountService::validatePassword(const string& password) {
     return true;
 }
 
-
 // =====================================================
-// ĐĂNG KÝ
+// ĐĂNG KÝ TÀI KHOẢN
 // =====================================================
 
+// Xử lý đăng ký tài khoản mới vào hệ thống
 bool AccountService::registerAccount(
     const string& username,
     const string& email,
@@ -71,19 +72,17 @@ bool AccountService::registerAccount(
         return false;
     }
 
-    // Kiểm tra username
+    // Kiểm tra tính hợp lệ của thông tin đầu vào
     if (!validateUsername(username)) {
         cerr << "Username khong hop le!" << endl;
         return false;
     }
 
-    // Kiểm tra email
     if (!validateEmail(email)) {
         cerr << "Email khong hop le!" << endl;
         return false;
     }
 
-    // Kiểm tra password
     if (!validatePassword(password)) {
         cerr << "Password phai co it nhat 6 ky tu!" << endl;
         return false;
@@ -94,14 +93,14 @@ bool AccountService::registerAccount(
         return false;
     }
 
-
-    // Kiểm tra username đã tồn tại
+    // Mã hóa ký tự đặc biệt phòng chống SQL Injection
     const string escapedUsername = db.escapeString(username);
     const string escapedEmail = db.escapeString(email);
     const string escapedPassword = db.escapeString(password);
     const string escapedFullName = db.escapeString(fullName);
     const string escapedPhone = db.escapeString(phone);
 
+    // Kiểm tra trùng lặp username
     string checkUsername =
         "SELECT account_id FROM Accounts WHERE username = '" +
         escapedUsername + "'";
@@ -122,8 +121,7 @@ bool AccountService::registerAccount(
         db.freeResult(result);
     }
 
-
-    // Kiểm tra email đã tồn tại
+    // Kiểm tra trùng lặp email
     string checkEmail =
         "SELECT account_id FROM Accounts WHERE email = '" +
         escapedEmail + "'";
@@ -144,8 +142,7 @@ bool AccountService::registerAccount(
         db.freeResult(result);
     }
 
-
-    // Thêm tài khoản vào database
+    // Thêm bản ghi tài khoản mới vào CSDL (mật khẩu mã hóa SHA256)
     string query =
         "INSERT INTO Accounts (username, email, password, fullname, phone, role) "
         "VALUES ('" +
@@ -166,11 +163,11 @@ bool AccountService::registerAccount(
     return true;
 }
 
-
 // =====================================================
 // ĐĂNG NHẬP
 // =====================================================
 
+// Xác thực tài khoản và đăng nhập hệ thống
 bool AccountService::login(
     const string& username,
     const string& password) {
@@ -186,8 +183,7 @@ bool AccountService::login(
         return false;
     }
 
-
-    // Tìm tài khoản
+    // Tìm kiếm thông tin đăng nhập trong CSDL
     string query =
         "SELECT account_id FROM Accounts "
         "WHERE username = '" +
@@ -202,9 +198,7 @@ bool AccountService::login(
         return false;
     }
 
-
     MYSQL_ROW row = mysql_fetch_row(result);
-
 
     // Đăng nhập thành công
     if (row != nullptr) {
@@ -219,7 +213,6 @@ bool AccountService::login(
         return true;
     }
 
-
     // Đăng nhập thất bại
     db.freeResult(result);
 
@@ -228,31 +221,29 @@ bool AccountService::login(
     return false;
 }
 
-
 // =====================================================
 // ĐỔI MẬT KHẨU
 // =====================================================
 
+// Thay đổi mật khẩu cho tài khoản hiện tại
 bool AccountService::changePassword(
     const string& oldPassword,
     const string& newPassword) {
 
-    // Kiểm tra đã đăng nhập
+    // Kiểm tra trạng thái đăng nhập
     if (!loggedIn) {
         cerr << "Ban chua dang nhap!" << endl;
         return false;
     }
 
-
-    // Kiểm tra password mới
+    // Kiểm tra định dạng mật khẩu mới
     if (!validatePassword(newPassword)) {
         cerr << "Password moi phai co it nhat 6 ky tu!"
              << endl;
         return false;
     }
 
-
-    // Kiểm tra password cũ
+    // Xác nhận mật khẩu cũ
     string checkQuery =
         "SELECT account_id FROM Accounts "
         "WHERE id = " +
@@ -267,7 +258,6 @@ bool AccountService::changePassword(
         return false;
     }
 
-
     MYSQL_ROW row = mysql_fetch_row(result);
 
     if (row == nullptr) {
@@ -281,8 +271,7 @@ bool AccountService::changePassword(
 
     db.freeResult(result);
 
-
-    // Cập nhật password mới
+    // Cập nhật mật khẩu mới đã mã hóa
     string updateQuery =
         "UPDATE Accounts SET password = SHA2('" +
         db.escapeString(newPassword) +
@@ -299,11 +288,11 @@ bool AccountService::changePassword(
     return true;
 }
 
-
 // =====================================================
-// ĐĂNG XUẤT
+// ĐĂNG XUẤT VÀ TRẠNG THÁI
 // =====================================================
 
+// Thực hiện đăng xuất tài khoản
 void AccountService::logout() {
 
     if (!loggedIn) {
@@ -317,20 +306,12 @@ void AccountService::logout() {
     cout << "Dang xuat thanh cong!" << endl;
 }
 
-
-// =====================================================
-// KIỂM TRA ĐĂNG NHẬP
-// =====================================================
-
+// Kiểm tra trạng thái đã đăng nhập hay chưa
 bool AccountService::isLoggedIn() const {
     return loggedIn;
 }
 
-
-// =====================================================
-// LẤY ID USER HIỆN TẠI
-// =====================================================
-
+// Lấy ID tài khoản hiện đang đăng nhập
 int AccountService::getCurrentUserId() const {
     return currentUserId;
 }

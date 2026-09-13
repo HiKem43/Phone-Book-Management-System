@@ -6,10 +6,16 @@
 
 using namespace std;
 
+// Khởi tạo các biến tĩnh của lớp ContactService
 vector<Contact> ContactService::contacts;
 int ContactService::nextId = 1;
 int ContactService::currentAccountId = 0;
 
+// =====================================================
+// HÀM BỔ TRỢ & KIỂM TRA DỮ LIỆU
+// =====================================================
+
+// Nhập dữ liệu chuỗi có bắt buộc (không cho phép để trống)
 string ContactService::inputRequired(string message)
 {
     string value;
@@ -27,6 +33,7 @@ string ContactService::inputRequired(string message)
     return value;
 }
 
+// Kiểm tra tính hợp lệ của số điện thoại (10 - 11 chữ số)
 bool ContactService::validPhone(string phone)
 {
     if (phone.length() < 10 || phone.length() > 11)
@@ -41,6 +48,7 @@ bool ContactService::validPhone(string phone)
     return true;
 }
 
+// Kiểm tra định dạng cơ bản của email
 bool ContactService::validEmail(string email)
 {
     if (email.empty())
@@ -56,6 +64,11 @@ bool ContactService::validEmail(string email)
         dot < email.length() - 1;
 }
 
+// =====================================================
+// CONSOLE UI RUNNER
+// =====================================================
+
+// Chạy menu điều khiển danh bạ trên nền Console
 void ContactService::run()
 {
     int choice;
@@ -106,6 +119,11 @@ void ContactService::run()
     } while (choice != 0);
 }
 
+// =====================================================
+// THÊM, TẢI & XÓA DỮ LIỆU BỘ NHỚ
+// =====================================================
+
+// Thêm liên hệ từ đối tượng Contact có sẵn
 bool ContactService::addContact(const Contact& contact)
 {
     for (const Contact& existing : contacts)
@@ -124,6 +142,7 @@ bool ContactService::addContact(const Contact& contact)
     return true;
 }
 
+// Tải danh sách liên hệ theo accountId từ cơ sở dữ liệu
 void ContactService::loadForAccount(int accountId)
 {
     currentAccountId = accountId;
@@ -133,6 +152,7 @@ void ContactService::loadForAccount(int accountId)
         if (contact.id >= nextId) nextId = contact.id + 1;
 }
 
+// Xóa dữ liệu tạm thời trong RAM khi đăng xuất
 void ContactService::clear()
 {
     contacts.clear();
@@ -140,6 +160,7 @@ void ContactService::clear()
     nextId = 1;
 }
 
+// Đảo trạng thái yêu thích của liên hệ
 void ContactService::toggleFavorite(int contactId)
 {
     for (Contact& contact : contacts) {
@@ -151,11 +172,17 @@ void ContactService::toggleFavorite(int contactId)
     }
 }
 
+// Trả về danh sách tất cả các liên hệ trong bộ nhớ
 const vector<Contact>& ContactService::getContacts()
 {
     return contacts;
 }
 
+// =====================================================
+// CHỨC NĂNG THÊM/XEM/SỬA/XÓA CONSOLE
+// =====================================================
+
+// Thêm liên hệ mới qua giao diện Console
 void ContactService::addContact()
 {
     Contact contact;
@@ -215,6 +242,7 @@ void ContactService::addContact()
     cout << "Contact added successfully!\n";
 }
 
+// Hiển thị danh sách liên hệ trên Console
 void ContactService::viewContacts()
 {
     if (contacts.empty())
@@ -236,6 +264,7 @@ void ContactService::viewContacts()
     }
 }
 
+// Tìm kiếm liên hệ theo từ khóa (tên, sđt, email)
 void ContactService::searchContact()
 {
     string keyword;
@@ -272,6 +301,7 @@ void ContactService::searchContact()
         cout << "No matching contact found.\n";
 }
 
+// Cập nhật thông tin liên hệ trên Console
 void ContactService::editContact()
 {
     int id;
@@ -342,6 +372,7 @@ void ContactService::editContact()
     cout << "Error: Contact not found!\n";
 }
 
+// Xóa liên hệ trên Console
 void ContactService::deleteContact()
 {
     int id;
@@ -379,6 +410,11 @@ void ContactService::deleteContact()
     cout << "Error: Contact not found!\n";
 }
 
+// =====================================================
+// NGHIỆP VỤ HỆ THỐNG (SYSTEM OPERATIONS)
+// =====================================================
+
+// Kiểm tra xem ID liên hệ có tồn tại không
 bool ContactService::exists(int contactId)
 {
     for (const Contact& c : contacts)
@@ -390,6 +426,7 @@ bool ContactService::exists(int contactId)
     return false;
 }
 
+// Cập nhật thông tin liên hệ và đồng bộ vào CSDL
 bool ContactService::updateContact(const Contact& updated)
 {
     for (const Contact& other : contacts)
@@ -410,6 +447,7 @@ bool ContactService::updateContact(const Contact& updated)
     return false;
 }
 
+// Xóa liên hệ theo ID và xóa các liên kết nhóm liên quan
 bool ContactService::removeContact(int contactId)
 {
     if (!db.deleteContact(currentAccountId, contactId)) return false;
@@ -423,6 +461,7 @@ bool ContactService::removeContact(int contactId)
     return false;
 }
 
+// Sắp xếp danh sách liên hệ theo thứ tự Alphabet của tên
 void ContactService::sortByName()
 {
     std::sort(contacts.begin(), contacts.end(), [](const Contact& left, const Contact& right) {

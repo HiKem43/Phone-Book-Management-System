@@ -14,9 +14,11 @@
 #include <utility>
 #include <vector>
 
+// Thể hiện duy nhất của DBManager dùng chung
 DBManager db;
 
 namespace {
+// Chuyển toàn bộ chuỗi sang chữ thường
 std::string toLower(std::string value) {
     std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
         return static_cast<char>(std::tolower(ch));
@@ -24,6 +26,7 @@ std::string toLower(std::string value) {
     return value;
 }
 
+// Xóa các ký tự khoảng trắng ở đầu và cuối chuỗi
 std::string trim(const std::string& value) {
     const auto begin = value.find_first_not_of(" \t\r\n");
     if (begin == std::string::npos) {
@@ -33,6 +36,7 @@ std::string trim(const std::string& value) {
     return value.substr(begin, end - begin + 1);
 }
 
+// Trích xuất giá trị nằm trong dấu nháy đơn từ câu lệnh SQL
 std::string extractQuotedValue(const std::string& input, const std::string& key) {
     const std::regex pattern(key + R"(\s*=\s*'([^']*)')", std::regex::icase);
     std::smatch match;
@@ -42,6 +46,7 @@ std::string extractQuotedValue(const std::string& input, const std::string& key)
     return "";
 }
 
+// Trích xuất giá trị hàm SHA2 từ câu lệnh SQL
 std::string extractSha2Value(const std::string& input, const std::string& key) {
     const std::regex pattern(key + R"(\s*=\s*SHA2\(\s*'([^']*)'\s*,\s*\d+\s*\))", std::regex::icase);
     std::smatch match;
@@ -51,6 +56,7 @@ std::string extractSha2Value(const std::string& input, const std::string& key) {
     return "";
 }
 
+// Trích xuất giá trị dạng số từ câu lệnh SQL
 std::string extractNumericValue(const std::string& input, const std::string& key) {
     const std::regex pattern(key + R"(\s*=\s*(\d+))", std::regex::icase);
     std::smatch match;
@@ -60,6 +66,7 @@ std::string extractNumericValue(const std::string& input, const std::string& key
     return "";
 }
 
+// Làm sạch dữ liệu trước khi lưu vào file
 std::string sanitizeForStorage(const std::string& value) {
     std::string result = value;
     std::replace(result.begin(), result.end(), '\'', ' ');
@@ -67,14 +74,21 @@ std::string sanitizeForStorage(const std::string& value) {
 }
 }
 
+// =====================================================
+// KHỞI TẠO VÀ KẾT NỐI HỆ THỐNG
+// =====================================================
+
+// Constructor khởi tạo bộ quản lý CSDL
 DBManager::DBManager() : conn(mysql_init(nullptr)), connected(false), lastInsertId(0) {}
 
+// Destructor đóng kết nối CSDL khi hoàn tất
 DBManager::~DBManager() {
     if (conn) {
         mysql_close(conn);
     }
 }
 
+// Thiết lập kết nối CSDL và xác định đường dẫn lưu trữ file
 bool DBManager::connect(const std::string&, const std::string&, const std::string&, const std::string& database, unsigned int) {
     char executablePath[MAX_PATH] = {};
     GetModuleFileNameA(nullptr, executablePath, MAX_PATH);
@@ -88,16 +102,23 @@ bool DBManager::connect(const std::string&, const std::string&, const std::strin
     return initializeSchema();
 }
 
+// Giả lập kết nối máy chủ CSDL
 bool DBManager::connectToServer(const std::string&, const std::string&, const std::string&, const std::string&, unsigned int) {
     connected = true;
     return true;
 }
 
+// Khởi tạo sơ đồ CSDL
 bool DBManager::initializeSchema() {
     connected = true;
     return true;
 }
 
+// =====================================================
+// THAO TÁC FILE TÀI KHOẢN
+// =====================================================
+
+// Đọc danh sách tài khoản từ file lưu trữ `.db`
 bool DBManager::loadAccounts() {
     accountRecords.clear();
     std::ifstream input(storageFile);
@@ -121,6 +142,7 @@ bool DBManager::loadAccounts() {
     return true;
 }
 
+// Ghi danh sách tài khoản hiện tại ra file lưu trữ `.db`
 bool DBManager::saveAccounts() const {
     if (storageFile.empty()) {
         return false;
@@ -143,10 +165,16 @@ bool DBManager::saveAccounts() const {
     return true;
 }
 
+// =====================================================
+// XỬ LÝ TRUY VẤN SQL GIẢ LẬP
+// =====================================================
+
+// Lấy con trỏ đối tượng MYSQL
 MYSQL* DBManager::getConn() {
     return conn;
 }
 
+// Xử lý truy vấn SELECT trên dữ liệu tài khoản
 MYSQL_RES* DBManager::executeQuery(const std::string& query) {
     if (!connected) {
         return nullptr;
@@ -207,6 +235,7 @@ MYSQL_RES* DBManager::executeQuery(const std::string& query) {
     return nullptr;
 }
 
+// Xử lý các truy vấn INSERT, UPDATE, CREATE
 bool DBManager::executeNonQuery(const std::string& query) {
     if (!connected) {
         return false;
@@ -222,6 +251,7 @@ bool DBManager::executeNonQuery(const std::string& query) {
         return true;
     }
 
+    // Xử lý thêm mới tài khoản (INSERT INTO Accounts)
     if (lower.find("insert into accounts") != std::string::npos) {
         const std::regex valuesPattern(
             R"(values\s*\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*SHA2\(\s*'([^']*)'\s*,\s*256\s*\)\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*\))",
@@ -257,6 +287,7 @@ bool DBManager::executeNonQuery(const std::string& query) {
         return saveAccounts();
     }
 
+    // Xử lý cập nhật tài khoản (UPDATE Accounts)
     if (lower.find("update accounts") != std::string::npos) {
         const std::string password = extractSha2Value(cleaned, "password");
         const std::string accountId = extractNumericValue(cleaned, "account_id");
@@ -275,16 +306,19 @@ bool DBManager::executeNonQuery(const std::string& query) {
     return false;
 }
 
+// Thực thi truy vấn và nhận về kết quả
 MYSQL_RES* DBManager::fetchQuery(const std::string& query) {
     return executeQuery(query);
 }
 
+// Giải phóng bộ nhớ của kết quả truy vấn MYSQL_RES
 void DBManager::freeResult(MYSQL_RES* result) {
     if (result) {
         mysql_free_result(result);
     }
 }
 
+// Thoát ký tự nháy đơn trong chuỗi
 std::string DBManager::escapeString(const std::string& str) const {
     std::string output;
     output.reserve(str.size() * 2);
@@ -297,18 +331,26 @@ std::string DBManager::escapeString(const std::string& str) const {
     return output;
 }
 
+// Lấy ID tự động chèn cuối cùng
 int DBManager::getInsertId() const {
     return lastInsertId;
 }
 
+// Kiểm tra trạng thái kết nối
 bool DBManager::isConnected() const {
     return connected;
 }
 
+// Trả về tên file lưu trữ CSDL
 std::string DBManager::getStorageFile() const {
     return storageFile;
 }
 
+// =====================================================
+// QUẢN LÝ TÀI KHOẢN CỦA HỆ THỐNG
+// =====================================================
+
+// Lấy danh sách toàn bộ các tài khoản trong CSDL
 std::vector<AccountData> DBManager::getAccounts() const {
     std::vector<AccountData> accounts;
     for (const auto& record : accountRecords) {
@@ -318,6 +360,7 @@ std::vector<AccountData> DBManager::getAccounts() const {
     return accounts;
 }
 
+// Lấy thông tin tài khoản theo ID
 bool DBManager::getAccount(int accountId, AccountData& account) const {
     for (const auto& record : accountRecords) {
         if (record.id == accountId) {
@@ -329,6 +372,7 @@ bool DBManager::getAccount(int accountId, AccountData& account) const {
     return false;
 }
 
+// Cập nhật thông tin tài khoản
 bool DBManager::updateAccount(const AccountData& account) {
     for (auto& record : accountRecords) {
         if (record.id == account.id) {
@@ -344,6 +388,7 @@ bool DBManager::updateAccount(const AccountData& account) {
     return false;
 }
 
+// Xóa tài khoản và xóa sạch các liên hệ/nhóm liên quan
 bool DBManager::deleteAccount(int accountId) {
     const auto oldSize = accountRecords.size();
     accountRecords.erase(std::remove_if(accountRecords.begin(), accountRecords.end(),
@@ -367,10 +412,16 @@ bool DBManager::deleteAccount(int accountId) {
     return true;
 }
 
+// Tạo tên đường dẫn file bổ trợ dựa theo hậu tố (.contacts, .groups, .memberships)
 std::string DBManager::getRelatedStorageFile(const std::string& suffix) const {
     return storageFile + suffix;
 }
 
+// =====================================================
+// ĐỌC / GHI FILE LIÊN HỆ (.contacts)
+// =====================================================
+
+// Tải tất cả liên hệ của một tài khoản cụ thể
 std::vector<Contact> DBManager::loadContacts(int accountId) const {
     std::vector<Contact> contacts;
     std::ifstream input(getRelatedStorageFile(".contacts"));
@@ -384,6 +435,7 @@ std::vector<Contact> DBManager::loadContacts(int accountId) const {
     return contacts;
 }
 
+// Thêm một bản ghi liên hệ mới vào file `.contacts`
 bool DBManager::saveContact(const Contact& contact) const {
     std::ofstream output(getRelatedStorageFile(".contacts"), std::ios::app);
     if (!output) return false;
@@ -394,6 +446,7 @@ bool DBManager::saveContact(const Contact& contact) const {
     return true;
 }
 
+// Cập nhật thông tin một liên hệ trong file `.contacts`
 bool DBManager::updateContact(const Contact& contact) const {
     std::ifstream input(getRelatedStorageFile(".contacts"));
     std::vector<Contact> all;
@@ -420,6 +473,7 @@ bool DBManager::updateContact(const Contact& contact) const {
     return true;
 }
 
+// Xóa liên hệ khỏi file `.contacts`
 bool DBManager::deleteContact(int accountId, int contactId) const {
     std::ifstream input(getRelatedStorageFile(".contacts"));
     std::vector<Contact> all;
@@ -440,6 +494,11 @@ bool DBManager::deleteContact(int accountId, int contactId) const {
     return true;
 }
 
+// =====================================================
+// ĐỌC / GHI FILE NHÓM (.groups)
+// =====================================================
+
+// Tải danh sách các nhóm thuộc một tài khoản
 std::vector<Group> DBManager::loadGroups(int accountId) const {
     std::vector<Group> groups;
     std::ifstream input(getRelatedStorageFile(".groups"));
@@ -451,6 +510,7 @@ std::vector<Group> DBManager::loadGroups(int accountId) const {
     return groups;
 }
 
+// Thêm nhóm mới vào file `.groups`
 bool DBManager::saveGroup(const Group& group) const {
     std::ofstream output(getRelatedStorageFile(".groups"), std::ios::app);
     if (!output) return false;
@@ -459,6 +519,7 @@ bool DBManager::saveGroup(const Group& group) const {
     return true;
 }
 
+// Cập nhật thông tin nhóm trong file `.groups`
 bool DBManager::updateGroup(const Group& group) const {
     std::ifstream input(getRelatedStorageFile(".groups"));
     std::vector<Group> all;
@@ -481,6 +542,7 @@ bool DBManager::updateGroup(const Group& group) const {
     return true;
 }
 
+// Xóa nhóm khỏi file `.groups`
 bool DBManager::deleteGroup(int accountId, int groupId) const {
     std::ifstream input(getRelatedStorageFile(".groups"));
     std::vector<Group> all;
@@ -497,6 +559,11 @@ bool DBManager::deleteGroup(int accountId, int groupId) const {
     return true;
 }
 
+// =====================================================
+// ĐỌC / GHI FILE PHÂN NHÓM (.memberships)
+// =====================================================
+
+// Tải danh sách phân nhóm liên hệ của tài khoản
 std::vector<ContactGroup> DBManager::loadContactGroups(int accountId) const {
     std::vector<ContactGroup> relations;
     std::ifstream input(getRelatedStorageFile(".memberships"));
@@ -508,6 +575,7 @@ std::vector<ContactGroup> DBManager::loadContactGroups(int accountId) const {
     return relations;
 }
 
+// Lưu thông tin phân nhóm liên hệ vào file `.memberships`
 bool DBManager::saveContactGroup(int accountId, const ContactGroup& relation) const {
     std::ofstream output(getRelatedStorageFile(".memberships"), std::ios::app);
     if (!output) return false;
@@ -515,6 +583,7 @@ bool DBManager::saveContactGroup(int accountId, const ContactGroup& relation) co
     return true;
 }
 
+// Xóa phân nhóm theo ID nhóm
 bool DBManager::deleteContactGroups(int accountId, int groupId) const {
     std::ifstream input(getRelatedStorageFile(".memberships"));
     std::vector<std::tuple<int, int, int>> all;
@@ -530,6 +599,7 @@ bool DBManager::deleteContactGroups(int accountId, int groupId) const {
     return true;
 }
 
+// Xóa phân nhóm theo ID liên hệ
 bool DBManager::deleteContactGroup(int accountId, int contactId) const {
     std::ifstream input(getRelatedStorageFile(".memberships"));
     std::vector<std::tuple<int, int, int>> all;

@@ -5,11 +5,17 @@
 
 using namespace std;
 
+// Khởi tạo các biến tĩnh của lớp GroupService
 vector<Group> GroupService::groups;
 vector<ContactGroup> GroupService::contactGroups;
 int GroupService::nextId = 1;
 int GroupService::currentAccountId = 0;
 
+// =====================================================
+// HÀM BỔ TRỢ & CONSOLE RUNNER
+// =====================================================
+
+// Hàm yêu cầu nhập chuỗi không được bỏ trống
 string GroupService::inputRequired(string message)
 {
     string value;
@@ -27,6 +33,7 @@ string GroupService::inputRequired(string message)
     return value;
 }
 
+// Điều hướng menu quản lý nhóm danh bạ trên nền Console
 void GroupService::run()
 {
     int choice;
@@ -82,6 +89,11 @@ void GroupService::run()
     } while (choice != 0);
 }
 
+// =====================================================
+// CHỨC NĂNG QUẢN LÝ NHÓM TRÊN CONSOLE
+// =====================================================
+
+// Thêm nhóm mới từ Console
 void GroupService::addGroup()
 {
     Group group;
@@ -109,6 +121,7 @@ void GroupService::addGroup()
     cout << "Group added successfully!\n";
 }
 
+// Thêm nhóm từ đối tượng Group
 void GroupService::addGroup(const Group& source)
 {
     Group group = source;
@@ -118,6 +131,7 @@ void GroupService::addGroup(const Group& source)
     db.saveGroup(group);
 }
 
+// Hiển thị danh sách nhóm ra Console
 void GroupService::viewGroups()
 {
     if (groups.empty())
@@ -154,6 +168,7 @@ void GroupService::viewGroups()
     }
 }
 
+// Tìm kiếm nhóm theo tên trên Console
 void GroupService::searchGroup()
 {
     string keyword;
@@ -179,6 +194,7 @@ void GroupService::searchGroup()
         cout << "No matching group found.\n";
 }
 
+// Sửa tên và mô tả nhóm trên Console
 void GroupService::editGroup()
 {
     int id;
@@ -218,6 +234,7 @@ void GroupService::editGroup()
     cout << "Error: Group not found!\n";
 }
 
+// Xóa nhóm trên Console
 void GroupService::deleteGroup()
 {
     int id;
@@ -276,6 +293,7 @@ void GroupService::deleteGroup()
     cout << "Error: Group not found!\n";
 }
 
+// Gán liên hệ vào nhóm trên Console
 void GroupService::assignContact()
 {
     int contactId;
@@ -295,6 +313,11 @@ void GroupService::assignContact()
     cout << "Contact assigned to group successfully!\n";
 }
 
+// =====================================================
+// NGHIỆP VỤ HỆ THỐNG QUẢN LÝ NHÓM
+// =====================================================
+
+// Phân gán liên hệ vào nhóm theo ID
 bool GroupService::assignContact(int contactId, int groupId)
 {
     if (!ContactService::exists(contactId))
@@ -322,6 +345,7 @@ bool GroupService::assignContact(int contactId, int groupId)
     return setContactGroup(contactId, groupId);
 }
 
+// Cập nhật mối quan hệ nhóm - liên hệ trong RAM và CSDL
 bool GroupService::setContactGroup(int contactId, int groupId)
 {
     if (!ContactService::exists(contactId))
@@ -374,6 +398,7 @@ bool GroupService::setContactGroup(int contactId, int groupId)
     return false;
 }
 
+// Trả về danh sách các liên hệ thuộc về một nhóm nhất định
 vector<Contact> GroupService::getContactsForGroup(int groupId)
 {
     vector<Contact> result;
@@ -397,11 +422,13 @@ vector<Contact> GroupService::getContactsForGroup(int groupId)
     return result;
 }
 
+// Lấy toàn bộ danh sách nhóm trong bộ nhớ
 const vector<Group>& GroupService::getGroups()
 {
     return groups;
 }
 
+// Tải danh sách nhóm và các phân nhóm của một tài khoản từ CSDL
 void GroupService::loadForAccount(int accountId)
 {
     currentAccountId = accountId;
@@ -480,6 +507,7 @@ void GroupService::loadForAccount(int accountId)
         if (group.id >= nextId) nextId = group.id + 1;
 }
 
+// Xóa sạch bộ nhớ tạm của danh sách nhóm
 void GroupService::clear()
 {
     groups.clear();
@@ -488,6 +516,7 @@ void GroupService::clear()
     nextId = 1;
 }
 
+// Cập nhật thông tin nhóm và đồng bộ CSDL
 bool GroupService::updateGroup(const Group& updated)
 {
     for (Group& group : groups) {
@@ -499,6 +528,7 @@ bool GroupService::updateGroup(const Group& updated)
     return false;
 }
 
+// Xóa nhóm và các liên kết liên hệ của nhóm đó
 bool GroupService::removeGroup(int groupId)
 {
     if (!db.deleteGroup(currentAccountId, groupId) ||
