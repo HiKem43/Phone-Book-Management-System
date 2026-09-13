@@ -1,7 +1,9 @@
+#include <windows.h>
 #include "DBManager.h"
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -74,7 +76,13 @@ DBManager::~DBManager() {
 }
 
 bool DBManager::connect(const std::string&, const std::string&, const std::string&, const std::string& database, unsigned int) {
-    storageFile = database.empty() ? "phonebook_accounts.db" : database + "_accounts.db";
+    char executablePath[MAX_PATH] = {};
+    GetModuleFileNameA(nullptr, executablePath, MAX_PATH);
+    const std::filesystem::path executableDirectory =
+        std::filesystem::path(executablePath).parent_path();
+    const std::string fileName = database.empty() ?
+        "phonebook_accounts.db" : database + "_accounts.db";
+    storageFile = (executableDirectory / fileName).string();
     connected = true;
     loadAccounts();
     return initializeSchema();
@@ -108,9 +116,8 @@ bool DBManager::loadAccounts() {
         accountRecords.push_back(record);
     }
 
-    if (!accountRecords.empty()) {
-        lastInsertId = accountRecords.back().id;
-    }
+    for (const auto& record : accountRecords)
+        if (record.id > lastInsertId) lastInsertId = record.id;
     return true;
 }
 
@@ -236,7 +243,9 @@ bool DBManager::executeNonQuery(const std::string& query) {
         }
 
         AccountRecord record;
-        record.id = static_cast<int>(accountRecords.size()) + 1;
+        record.id = 1;
+        for (const auto& existing : accountRecords)
+            if (existing.id >= record.id) record.id = existing.id + 1;
         record.username = sanitizeForStorage(username);
         record.email = sanitizeForStorage(email);
         record.password = sanitizeForStorage(password);
@@ -341,7 +350,21 @@ bool DBManager::deleteAccount(int accountId) {
         [accountId](const AccountRecord& record) { return record.id == accountId; }),
         accountRecords.end());
     if (accountRecords.size() == oldSize) return false;
-    return saveAccounts();
+    if (!saveAccounts()) return false;
+
+    const auto contacts = loadContacts(accountId);
+    for (const auto& contact : contacts) {
+        if (!deleteContact(accountId, contact.id) ||
+            !deleteContactGroup(accountId, contact.id)) return false;
+    }
+
+    const auto groups = loadGroups(accountId);
+    for (const auto& group : groups) {
+        if (!deleteGroup(accountId, group.id) ||
+            !deleteContactGroups(accountId, group.id)) return false;
+    }
+
+    return true;
 }
 
 std::string DBManager::getRelatedStorageFile(const std::string& suffix) const {
@@ -503,6 +526,23 @@ bool DBManager::deleteContactGroups(int accountId, int groupId) const {
     for (const auto& item : all) {
         if (std::get<0>(item) == accountId && std::get<2>(item) == groupId) continue;
         output << std::get<0>(item) << ' ' << std::get<1>(item) << ' ' << std::get<2>(item) << '\n';
+    }
+    return true;
+}
+
+bool DBManager::deleteContactGroup(int accountId, int contactId) const {
+    std::ifstream input(getRelatedStorageFile(".memberships"));
+    std::vector<std::tuple<int, int, int>> all;
+    int storedAccountId, storedContactId, groupId;
+    while (input >> storedAccountId >> storedContactId >> groupId)
+        all.emplace_back(storedAccountId, storedContactId, groupId);
+
+    std::ofstream output(getRelatedStorageFile(".memberships"), std::ios::trunc);
+    if (!output) return false;
+    for (const auto& item : all) {
+        if (std::get<0>(item) == accountId && std::get<1>(item) == contactId) continue;
+        output << std::get<0>(item) << ' ' << std::get<1>(item) << ' '
+               << std::get<2>(item) << '\n';
     }
     return true;
 }

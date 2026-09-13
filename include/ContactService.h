@@ -20,7 +20,7 @@ public:
     static void run();
 
     static void addContact();
-    static void addContact(const Contact& contact);
+    static bool addContact(const Contact& contact);
     static const vector<Contact>& getContacts();
     static void viewContacts();
     static void searchContact();

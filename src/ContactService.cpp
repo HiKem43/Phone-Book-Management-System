@@ -106,13 +106,22 @@ void ContactService::run()
     } while (choice != 0);
 }
 
-void ContactService::addContact(const Contact& contact)
+bool ContactService::addContact(const Contact& contact)
 {
+    for (const Contact& existing : contacts)
+    {
+        if (existing.name == contact.name || existing.phone == contact.phone)
+            return false;
+    }
+
     Contact newContact = contact;
     newContact.account_id = currentAccountId;
     newContact.id = nextId++;
+    if (!db.saveContact(newContact))
+        return false;
+
     contacts.push_back(newContact);
-    db.saveContact(newContact);
+    return true;
 }
 
 void ContactService::loadForAccount(int accountId)
@@ -194,8 +203,14 @@ void ContactService::addContact()
     contact.account_id = currentAccountId;
     contact.id = nextId++;
 
+    if (!db.saveContact(contact))
+    {
+        --nextId;
+        cout << "Error: Contact could not be saved!\n";
+        return;
+    }
+
     contacts.push_back(contact);
-    db.saveContact(contact);
 
     cout << "Contact added successfully!\n";
 }
@@ -348,6 +363,7 @@ void ContactService::deleteContact()
             if (confirm == 'Y' || confirm == 'y')
             {
                 db.deleteContact(currentAccountId, it->id);
+                db.deleteContactGroup(currentAccountId, it->id);
                 contacts.erase(it);
                 cout << "Contact deleted successfully!\n";
             }
@@ -376,10 +392,19 @@ bool ContactService::exists(int contactId)
 
 bool ContactService::updateContact(const Contact& updated)
 {
+    for (const Contact& other : contacts)
+    {
+        if (other.id != updated.id &&
+            (other.name == updated.name || other.phone == updated.phone))
+            return false;
+    }
+
     for (Contact& contact : contacts) {
         if (contact.id == updated.id && contact.account_id == currentAccountId) {
+            if (!db.updateContact(updated))
+                return false;
             contact = updated;
-            return db.updateContact(contact);
+            return true;
         }
     }
     return false;
@@ -388,6 +413,7 @@ bool ContactService::updateContact(const Contact& updated)
 bool ContactService::removeContact(int contactId)
 {
     if (!db.deleteContact(currentAccountId, contactId)) return false;
+    db.deleteContactGroup(currentAccountId, contactId);
     for (auto it = contacts.begin(); it != contacts.end(); ++it) {
         if (it->id == contactId) {
             contacts.erase(it);

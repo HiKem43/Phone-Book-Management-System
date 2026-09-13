@@ -25,7 +25,8 @@ public:
         const string& email,
         const string& password,
         const string& fullName,
-        const string& phone
+        const string& phone,
+        const string& role = "User"
     );
 
     // Đăng nhập

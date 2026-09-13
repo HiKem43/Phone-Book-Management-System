@@ -1,0 +1,8 @@
+================================================================================
+Linker Errors
+Generated: 2026-09-13T11:20:57.691Z
+Total Errors: 1
+================================================================================
+
+[LNK1168] (MSVC)
+cannot open E:\code\Phone-Book-Management-System\build\Debug\PhoneBookManagementSystem.exe for writing [E:\code\Phone-Book-Management-System\build\PhoneBookManagementSystem.vcxproj]

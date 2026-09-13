@@ -63,7 +63,8 @@ bool AccountService::registerAccount(
     const string& email,
     const string& password,
     const string& fullName,
-    const string& phone) {
+    const string& phone,
+    const string& role) {
 
     if (!db.isConnected()) {
         cerr << "Database is not connected!" << endl;
@@ -85,6 +86,11 @@ bool AccountService::registerAccount(
     // Kiểm tra password
     if (!validatePassword(password)) {
         cerr << "Password phai co it nhat 6 ky tu!" << endl;
+        return false;
+    }
+
+    if (role != "User" && role != "Admin") {
+        cerr << "Role khong hop le!" << endl;
         return false;
     }
 
@@ -147,7 +153,8 @@ bool AccountService::registerAccount(
         escapedEmail + "', SHA2('" +
         escapedPassword + "', 256), '" +
         escapedFullName + "', '" +
-        escapedPhone + "', 'User')";
+        escapedPhone + "', '" +
+        db.escapeString(role) + "')";
 
     if (!db.executeNonQuery(query)) {
         cerr << "Dang ky that bai!" << endl;

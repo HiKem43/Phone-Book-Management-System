@@ -404,7 +404,10 @@ void MenuUI::showAddContact()
     createLabel("Phone", 150, 165, 120, 30); createEdit("", 290, 160, 400, 35, 1302);
     createLabel("Email", 150, 215, 120, 30); createEdit("", 290, 210, 400, 35, 1303);
     createLabel("Address", 150, 265, 120, 30); createEdit("", 290, 260, 400, 35, 1304);
-    createLabel("Group", 150, 315, 120, 30); createCombo("No Group", 290, 310, 400, 35, 1305);
+    createLabel("Group", 150, 315, 120, 30);
+    HWND groupCombo = createCombo("No Group", 290, 310, 400, 35, 1305);
+    for (const auto& group : GroupService::getGroups())
+        SendMessageA(groupCombo, CB_ADDSTRING, 0, (LPARAM)group.name.c_str());
     createLabel("Favorite", 150, 365, 120, 30); createIconButton(L"[*]  Mark as Favorite", 290, 360, 190, 38, ID_FAVORITE_TOGGLE);
     createButton("Save", 300, 425, 170, 45, ID_SAVE);
     createButton("Cancel", 500, 425, 170, 45, ID_CANCEL);
@@ -418,7 +421,10 @@ void MenuUI::showEditContact()
     createLabel("Phone", 150, 165, 120, 30); createEdit("", 290, 160, 400, 35, 1402);
     createLabel("Email", 150, 215, 120, 30); createEdit("", 290, 210, 400, 35, 1403);
     createLabel("Address", 150, 265, 120, 30); createEdit("", 290, 260, 400, 35, 1404);
-    createLabel("Group", 150, 315, 120, 30); createCombo("No Group", 290, 310, 400, 35, 1405);
+    createLabel("Group", 150, 315, 120, 30);
+    HWND groupCombo = createCombo("No Group", 290, 310, 400, 35, 1405);
+    for (const auto& group : GroupService::getGroups())
+        SendMessageA(groupCombo, CB_ADDSTRING, 0, (LPARAM)group.name.c_str());
     createLabel("Favorite", 150, 365, 120, 30); createIconButton(L"[*]  Favorite", 290, 360, 160, 38, ID_FAVORITE_TOGGLE);
     createButton("Update", 300, 425, 170, 45, ID_UPDATE);
     createButton("Cancel", 500, 425, 170, 45, ID_CANCEL);
@@ -429,6 +435,16 @@ void MenuUI::showEditContact()
             SetDlgItemTextA(hWnd, 1402, contact.phone.c_str());
             SetDlgItemTextA(hWnd, 1403, contact.email.c_str());
             SetDlgItemTextA(hWnd, 1404, contact.address.c_str());
+            const auto& groups = GroupService::getGroups();
+            for (size_t groupIndex = 0; groupIndex < groups.size(); ++groupIndex)
+            {
+                if (groups[groupIndex].id == contact.group_id)
+                {
+                    SendMessageA(groupCombo, CB_SETCURSEL,
+                                 static_cast<WPARAM>(groupIndex + 1), 0);
+                    break;
+                }
+            }
             break;
         }
     }
@@ -488,7 +504,9 @@ void MenuUI::showGroups()
     const auto& groups = GroupService::getGroups();
     if (groups.empty()) SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"No groups yet.");
     for (const auto& group : groups) {
-        std::string line = group.name + " | " + group.description;
+        const auto groupContacts = GroupService::getContactsForGroup(group.id);
+        std::string line = group.name + " | " + group.description + " | " +
+            std::to_string(groupContacts.size()) + " contact(s)";
         SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
     }
     createButton("View", 125, 475, 100, 42, ID_VIEW_GROUP);
@@ -540,11 +558,30 @@ void MenuUI::showDeleteGroup()
 void MenuUI::showGroupDetail()
 {
     createHeader("Group Details", "View the selected group and its contacts.");
-    createLabel("Group Name:", 170, 130, 140, 30); createLabel("Selected group", 320, 130, 350, 30);
-    createLabel("Description:", 170, 180, 140, 30); createLabel("-", 320, 180, 350, 30);
+    const Group* selectedGroup = nullptr;
+    for (const auto& group : GroupService::getGroups()) {
+        if (group.id == selectedGroupId) {
+            selectedGroup = &group;
+            break;
+        }
+    }
+
+    createLabel("Group Name:", 170, 130, 140, 30);
+    createLabel(selectedGroup ? selectedGroup->name.c_str() : "-", 320, 130, 350, 30);
+    createLabel("Description:", 170, 180, 140, 30);
+    createLabel(selectedGroup ? selectedGroup->description.c_str() : "-", 320, 180, 350, 30);
     createLabel("Contacts in Group", 170, 240, 250, 30, true);
     HWND list = createList(170, 280, 500, 170, 1950);
-    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"Contacts assigned to this group will appear here.");
+    if (selectedGroup) {
+        const auto contacts = GroupService::getContactsForGroup(selectedGroup->id);
+        for (const auto& contact : contacts) {
+            std::string line = contact.name + " | " + contact.phone;
+            SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
+        }
+        if (contacts.empty())
+            SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"No contacts assigned.");
+    }
+    createButton("Add Contact", 300, 475, 170, 42, ID_ASSIGN);
     createBackButton();
 }
 
@@ -558,10 +595,17 @@ void MenuUI::showAssignContact()
         std::string line = contact.name + " | " + contact.phone;
         SendMessageA(contactCombo, CB_ADDSTRING, 0, (LPARAM)line.c_str());
     }
+    if (!ContactService::getContacts().empty())
+        SendMessageA(contactCombo, CB_SETCURSEL, 0, 0);
     createLabel("Group", 160, 210, 120, 30);
     HWND groupCombo = createCombo(nullptr, 300, 205, 390, 35, 1902);
-    for (const auto& group : GroupService::getGroups())
+    for (size_t index = 0; index < GroupService::getGroups().size(); ++index)
+    {
+        const auto& group = GroupService::getGroups()[index];
         SendMessageA(groupCombo, CB_ADDSTRING, 0, (LPARAM)group.name.c_str());
+        if (group.id == selectedGroupId)
+            SendMessageA(groupCombo, CB_SETCURSEL, static_cast<WPARAM>(index), 0);
+    }
     createButton("Assign", 310, 285, 170, 45, ID_ASSIGN);
     createButton("Cancel", 510, 285, 170, 45, ID_CANCEL);
 }
@@ -654,7 +698,9 @@ void MenuUI::showAddUser()
     createLabel("Full Name", 150, 205, 130, 30); createEdit("", 300, 200, 390, 35, 2403);
     createLabel("Email", 150, 255, 130, 30); createEdit("", 300, 250, 390, 35, 2404);
     createLabel("Phone", 150, 305, 130, 30); createEdit("", 300, 300, 390, 35, 2405);
-    createLabel("Role", 150, 355, 130, 30); createCombo("User", 300, 350, 390, 35, 2406);
+    createLabel("Role", 150, 355, 130, 30);
+    HWND roleCombo = createCombo("User", 300, 350, 390, 35, 2406);
+    SendMessageA(roleCombo, CB_ADDSTRING, 0, (LPARAM)"Admin");
     createButton("Save", 300, 415, 170, 45, ID_SAVE);
     createButton("Cancel", 500, 415, 170, 45, ID_CANCEL);
 }
@@ -667,9 +713,22 @@ void MenuUI::showEditUser()
     createLabel("Full Name", 150, 175, 130, 30); createEdit("", 300, 170, 390, 35, 2502);
     createLabel("Email", 150, 225, 130, 30); createEdit("", 300, 220, 390, 35, 2503);
     createLabel("Phone", 150, 275, 130, 30); createEdit("", 300, 270, 390, 35, 2504);
-    createLabel("Role", 150, 325, 130, 30); createCombo("User", 300, 320, 390, 35, 2505);
+    createLabel("Role", 150, 325, 130, 30);
+    HWND roleCombo = createCombo("User", 300, 320, 390, 35, 2505);
+    SendMessageA(roleCombo, CB_ADDSTRING, 0, (LPARAM)"Admin");
     createButton("Update", 300, 390, 170, 45, ID_UPDATE);
     createButton("Cancel", 500, 390, 170, 45, ID_CANCEL);
+
+    AccountData selected;
+    if (db.getAccount(selectedAccountId, selected))
+    {
+        SetDlgItemTextA(hWnd, 2501, selected.username.c_str());
+        SetDlgItemTextA(hWnd, 2502, selected.fullname.c_str());
+        SetDlgItemTextA(hWnd, 2503, selected.email.c_str());
+        SetDlgItemTextA(hWnd, 2504, selected.phone.c_str());
+        if (selected.role == "Admin")
+            SendMessageA(roleCombo, CB_SETCURSEL, 1, 0);
+    }
 }
 
 // Giao diện xác nhận xóa User.
@@ -686,15 +745,14 @@ void MenuUI::showDeleteUser()
 void MenuUI::showSystemReports()
 {
     createHeader("View System Reports", "Summary information for Admin.");
-    createLabel("Total Users", 100, 135, 180, 30, true);
-    createLabel("--", 100, 170, 180, 45, true);
-    createLabel("Total Contacts", 335, 135, 180, 30, true);
-    createLabel("--", 335, 170, 180, 45, true);
-    createLabel("Total Groups", 570, 135, 180, 30, true);
-    createLabel("--", 570, 170, 180, 45, true);
-    createLabel("Report table / statistics", 100, 250, 300, 30, true);
+    createLabel("Current account statistics", 100, 135, 300, 30, true);
     HWND list = createList(100, 290, 650, 150, 2601);
-    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"Statistics will be loaded from the database.");
+    const std::string users = "Total users: " + std::to_string(db.getAccounts().size());
+    const std::string contacts = "Your contacts: " + std::to_string(ContactService::getContacts().size());
+    const std::string groups = "Your groups: " + std::to_string(GroupService::getGroups().size());
+    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)users.c_str());
+    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)contacts.c_str());
+    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)groups.c_str());
     createButton("Refresh", 330, 465, 170, 45, ID_REFRESH);
     createBackButton(ID_ADMIN_MENU);
 }
@@ -981,6 +1039,12 @@ void MenuUI::handleCommand(int id)
 
             Contact contact;
             contact.account_id = accountService.getCurrentUserId();
+            int groupId = 0;
+            LRESULT groupIndex = SendMessageA(GetDlgItem(hWnd, 1305), CB_GETCURSEL, 0, 0);
+            const auto& groups = GroupService::getGroups();
+            if (groupIndex > 0 && static_cast<size_t>(groupIndex - 1) < groups.size())
+                groupId = groups[static_cast<size_t>(groupIndex - 1)].id;
+
             contact.group_id = 0;
             contact.name = name;
             contact.phone = phone;
@@ -988,7 +1052,18 @@ void MenuUI::handleCommand(int id)
             contact.address = address;
             contact.isFavorite = false;
 
-            ContactService::addContact(contact);
+            if (!ContactService::addContact(contact))
+            {
+                MessageBoxA(hWnd, "A contact with this name or phone already exists, or the contact could not be saved.",
+                            "Add Contact", MB_OK | MB_ICONWARNING);
+                break;
+            }
+            if (groupId != 0 && !ContactService::getContacts().empty() &&
+                !GroupService::assignContact(ContactService::getContacts().back().id, groupId))
+            {
+                MessageBoxA(hWnd, "Contact was saved, but could not be assigned to the selected group.",
+                            "Add Contact", MB_OK | MB_ICONWARNING);
+            }
             showScreen("contacts");
         }
         else if (currentScreen == "add_group")
@@ -998,6 +1073,20 @@ void MenuUI::handleCommand(int id)
             group.description = getEditText(hWnd, 1702);
             if (group.name.empty()) {
                 MessageBoxA(hWnd, "Group name cannot be empty.", "Add Group", MB_OK | MB_ICONWARNING);
+                break;
+            }
+            bool duplicate = false;
+            for (const auto& existing : GroupService::getGroups())
+            {
+                if (existing.name == group.name)
+                {
+                    duplicate = true;
+                    break;
+                }
+            }
+            if (duplicate)
+            {
+                MessageBoxA(hWnd, "A group with this name already exists.", "Add Group", MB_OK | MB_ICONWARNING);
                 break;
             }
             GroupService::addGroup(group);
@@ -1010,7 +1099,9 @@ void MenuUI::handleCommand(int id)
             const std::string fullname = getEditText(hWnd, 2403);
             const std::string email = getEditText(hWnd, 2404);
             const std::string phone = getEditText(hWnd, 2405);
-            if (accountService.registerAccount(username, email, password, fullname, phone))
+            const std::string role = SendMessageA(GetDlgItem(hWnd, 2406), CB_GETCURSEL, 0, 0) == 1
+                ? "Admin" : "User";
+            if (accountService.registerAccount(username, email, password, fullname, phone, role))
                 showScreen("users");
             else MessageBoxA(hWnd, "User creation failed.", "Add User", MB_OK | MB_ICONWARNING);
         }
@@ -1025,12 +1116,21 @@ void MenuUI::handleCommand(int id)
                     contact.phone = getEditText(hWnd, 1402);
                     contact.email = getEditText(hWnd, 1403);
                     contact.address = getEditText(hWnd, 1404);
+                    LRESULT groupIndex = SendMessageA(GetDlgItem(hWnd, 1405), CB_GETCURSEL, 0, 0);
+                    const auto& groups = GroupService::getGroups();
+                    int groupId = 0;
+                    if (groupIndex > 0 && static_cast<size_t>(groupIndex - 1) < groups.size())
+                        groupId = groups[static_cast<size_t>(groupIndex - 1)].id;
+                    contact.group_id = groupId;
                     if (contact.name.empty() || !validPhoneValue(contact.phone)) {
                         MessageBoxA(hWnd, "Name and phone are invalid.", "Edit Contact", MB_OK | MB_ICONWARNING);
                         break;
                     }
-                    ContactService::updateContact(contact);
-                    showScreen("contacts");
+                    if (ContactService::updateContact(contact) &&
+                        GroupService::setContactGroup(selectedContactId, groupId))
+                        showScreen("contacts");
+                    else
+                        MessageBoxA(hWnd, "Contact could not be updated.", "Edit Contact", MB_OK | MB_ICONERROR);
                     break;
                 }
             }
@@ -1047,7 +1147,47 @@ void MenuUI::handleCommand(int id)
                 }
             }
         }
-        else if (currentScreen == "edit_user") showScreen("users");
+        else if (currentScreen == "edit_user")
+        {
+            AccountData account;
+            if (!db.getAccount(selectedAccountId, account))
+            {
+                MessageBoxA(hWnd, "User account was not found.", "Edit User", MB_OK | MB_ICONERROR);
+                break;
+            }
+
+            const std::string username = getEditText(hWnd, 2501);
+            const std::string fullname = getEditText(hWnd, 2502);
+            const std::string email = getEditText(hWnd, 2503);
+            const std::string phone = getEditText(hWnd, 2504);
+            if (username.empty() || fullname.empty() || email.empty() || phone.empty())
+            {
+                MessageBoxA(hWnd, "All user fields are required.", "Edit User", MB_OK | MB_ICONWARNING);
+                break;
+            }
+
+            for (const auto& other : db.getAccounts())
+            {
+                if (other.id != account.id && other.username == username)
+                {
+                    MessageBoxA(hWnd, "Username already exists.", "Edit User", MB_OK | MB_ICONWARNING);
+                    return;
+                }
+            }
+
+            account.username = username;
+            account.fullname = fullname;
+            account.email = email;
+            account.phone = phone;
+            account.role = SendMessageA(GetDlgItem(hWnd, 2505), CB_GETCURSEL, 0, 0) == 1
+                ? "Admin" : "User";
+            if (!db.updateAccount(account))
+            {
+                MessageBoxA(hWnd, "User could not be updated.", "Edit User", MB_OK | MB_ICONERROR);
+                break;
+            }
+            showScreen("users");
+        }
         else if (currentScreen == "change_password") {
             std::string oldPassword = getEditText(hWnd, 2201);
             std::string newPassword = getEditText(hWnd, 2202);
@@ -1128,20 +1268,46 @@ void MenuUI::handleCommand(int id)
         }
         else showScreen("groups");
         break;
-    case ID_VIEW_GROUP: showScreen("group_detail"); break;
+    case ID_VIEW_GROUP:
+        if (currentScreen == "groups") {
+            LRESULT index = SendMessageA(GetDlgItem(hWnd, 1601), LB_GETCURSEL, 0, 0);
+            const auto& groups = GroupService::getGroups();
+            if (index >= 0 && static_cast<size_t>(index) < groups.size()) {
+                selectedGroupId = groups[static_cast<size_t>(index)].id;
+                showScreen("group_detail");
+            }
+        }
+        break;
     case ID_GROUP_DETAIL: showScreen("group_detail"); break;
     case ID_SEARCH_GROUP:
         if (GroupService::getGroups().empty()) MessageBoxA(hWnd, "No groups found.", "Search Group", MB_OK);
         else showScreen("groups");
         break;
     case ID_ASSIGN:
-        if (currentScreen == "groups") showScreen("assign_contact");
+        if (currentScreen == "groups")
+        {
+            LRESULT index = SendMessageA(GetDlgItem(hWnd, 1601), LB_GETCURSEL, 0, 0);
+            const auto& groups = GroupService::getGroups();
+            if (index < 0 || static_cast<size_t>(index) >= groups.size())
+            {
+                MessageBoxA(hWnd, "Select a group first.", "Assign Contact", MB_OK | MB_ICONWARNING);
+                break;
+            }
+            selectedGroupId = groups[static_cast<size_t>(index)].id;
+            showScreen("assign_contact");
+        }
         else if (currentScreen == "assign_contact")
         {
             LRESULT contactIndex = SendMessageA(GetDlgItem(hWnd, 1901), CB_GETCURSEL, 0, 0);
             LRESULT groupIndex = SendMessageA(GetDlgItem(hWnd, 1902), CB_GETCURSEL, 0, 0);
             const auto& contacts = ContactService::getContacts();
             const auto& groups = GroupService::getGroups();
+            if (contacts.empty() || groups.empty())
+            {
+                MessageBoxA(hWnd, contacts.empty() ? "No contacts are available." : "No groups are available.",
+                            "Assign Contact", MB_OK | MB_ICONWARNING);
+                break;
+            }
             if (contactIndex < 0 || groupIndex < 0 ||
                 static_cast<size_t>(contactIndex) >= contacts.size() ||
                 static_cast<size_t>(groupIndex) >= groups.size()) {
@@ -1151,6 +1317,9 @@ void MenuUI::handleCommand(int id)
             if (GroupService::assignContact(contacts[static_cast<size_t>(contactIndex)].id,
                                              groups[static_cast<size_t>(groupIndex)].id))
                 showScreen("groups");
+            else
+                MessageBoxA(hWnd, "The contact could not be assigned to this group.",
+                            "Assign Contact", MB_OK | MB_ICONERROR);
         }
         break;
 
@@ -1163,7 +1332,18 @@ void MenuUI::handleCommand(int id)
     case ID_RECOVERY: showScreen("recovery"); break;
     case ID_ADMIN_MENU: showScreen("admin"); break;
     case ID_ADD_USER: showScreen("add_user"); break;
-    case ID_EDIT_USER: showScreen("edit_user"); break;
+    case ID_EDIT_USER:
+        if (currentScreen == "users")
+        {
+            LRESULT index = SendMessageA(GetDlgItem(hWnd, 2302), LB_GETCURSEL, 0, 0);
+            const auto accounts = db.getAccounts();
+            if (index >= 0 && static_cast<size_t>(index) < accounts.size())
+            {
+                selectedAccountId = accounts[static_cast<size_t>(index)].id;
+                showScreen("edit_user");
+            }
+        }
+        break;
     case ID_DELETE_USER:
         if (currentScreen == "delete_user")
         {

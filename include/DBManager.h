@@ -210,6 +210,7 @@ public:
     std::vector<ContactGroup> loadContactGroups(int accountId) const;
     bool saveContactGroup(int accountId, const ContactGroup& relation) const;
     bool deleteContactGroups(int accountId, int groupId) const;
+    bool deleteContactGroup(int accountId, int contactId) const;
 };
 
 // Khai báo đối tượng toàn cục để tái sử dụng 1 kết nối duy nhất trong toàn bộ ứng dụng

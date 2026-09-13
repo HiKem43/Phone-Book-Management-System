@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "Contact.h"
 #include "Group.h"
 
 using namespace std;
@@ -26,6 +27,8 @@ public:
     static void deleteGroup();
     static void assignContact();
     static bool assignContact(int contactId, int groupId);
+    static bool setContactGroup(int contactId, int groupId);
+    static std::vector<Contact> getContactsForGroup(int groupId);
     static const vector<Group>& getGroups();
     static void loadForAccount(int accountId);
     static void clear();

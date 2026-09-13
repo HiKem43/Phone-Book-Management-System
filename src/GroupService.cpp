@@ -240,6 +240,17 @@ void GroupService::deleteGroup()
             {
                 db.deleteGroup(currentAccountId, it->id);
                 db.deleteContactGroups(currentAccountId, it->id);
+
+                for (const Contact& contact : ContactService::getContacts())
+                {
+                    if (contact.group_id == id)
+                    {
+                        Contact updated = contact;
+                        updated.group_id = 0;
+                        ContactService::updateContact(updated);
+                    }
+                }
+
                 groups.erase(it);
 
                 for (auto cg = contactGroups.begin();
@@ -293,10 +304,9 @@ bool GroupService::assignContact(int contactId, int groupId)
     }
 
     bool groupExists = false;
-
-    for (const Group& g : groups)
+    for (const Group& group : groups)
     {
-        if (g.id == groupId)
+        if (group.id == groupId)
         {
             groupExists = true;
             break;
@@ -309,23 +319,82 @@ bool GroupService::assignContact(int contactId, int groupId)
         return false;
     }
 
-    for (const ContactGroup& cg : contactGroups)
+    return setContactGroup(contactId, groupId);
+}
+
+bool GroupService::setContactGroup(int contactId, int groupId)
+{
+    if (!ContactService::exists(contactId))
+        return false;
+
+    if (groupId != 0)
     {
-        if (cg.contactId == contactId &&
-            cg.groupId == groupId)
+        bool groupExists = false;
+        for (const Group& group : groups)
         {
-            cout << "Error: Contact already belongs to this group!\n";
+            if (group.id == groupId)
+            {
+                groupExists = true;
+                break;
+            }
+        }
+        if (!groupExists)
             return false;
+    }
+
+    if (!db.deleteContactGroup(currentAccountId, contactId))
+        return false;
+
+    for (auto it = contactGroups.begin(); it != contactGroups.end();)
+    {
+        if (it->contactId == contactId)
+            it = contactGroups.erase(it);
+        else
+            ++it;
+    }
+
+    if (groupId != 0)
+    {
+        ContactGroup relation{contactId, groupId};
+        if (!db.saveContactGroup(currentAccountId, relation))
+            return false;
+        contactGroups.push_back(relation);
+    }
+
+    for (const Contact& contact : ContactService::getContacts())
+    {
+        if (contact.id == contactId)
+        {
+            Contact updated = contact;
+            updated.group_id = groupId;
+            return ContactService::updateContact(updated);
         }
     }
 
-    ContactGroup cg;
-    cg.contactId = contactId;
-    cg.groupId = groupId;
+    return false;
+}
 
-    contactGroups.push_back(cg);
-    db.saveContactGroup(currentAccountId, cg);
-    return true;
+vector<Contact> GroupService::getContactsForGroup(int groupId)
+{
+    vector<Contact> result;
+    const auto& contacts = ContactService::getContacts();
+
+    for (const ContactGroup& relation : contactGroups)
+    {
+        if (relation.groupId != groupId)
+            continue;
+
+        for (const Contact& contact : contacts)
+        {
+            if (contact.id == relation.contactId)
+            {
+                result.push_back(contact);
+                break;
+            }
+        }
+    }
+
+    return result;
 }
 
 const vector<Group>& GroupService::getGroups()
@@ -338,6 +407,74 @@ void GroupService::loadForAccount(int accountId)
     currentAccountId = accountId;
     groups = db.loadGroups(accountId);
     contactGroups = db.loadContactGroups(accountId);
+
+    vector<ContactGroup> normalizedRelations;
+    for (const ContactGroup& relation : contactGroups)
+    {
+        bool validContact = ContactService::exists(relation.contactId);
+        bool validGroup = false;
+        for (const Group& group : groups)
+        {
+            if (group.id == relation.groupId)
+            {
+                validGroup = true;
+                break;
+            }
+        }
+
+        bool duplicate = false;
+        for (const ContactGroup& existing : normalizedRelations)
+        {
+            if (existing.contactId == relation.contactId)
+            {
+                duplicate = true;
+                break;
+            }
+        }
+
+        if (validContact && validGroup && !duplicate)
+            normalizedRelations.push_back(relation);
+    }
+    contactGroups = normalizedRelations;
+
+    for (const Contact& contact : ContactService::getContacts())
+    {
+        int membershipGroupId = 0;
+        for (const ContactGroup& relation : contactGroups)
+        {
+            if (relation.contactId == contact.id)
+            {
+                membershipGroupId = relation.groupId;
+                break;
+            }
+        }
+
+        if (membershipGroupId == 0 && contact.group_id != 0)
+        {
+            bool validGroup = false;
+            for (const Group& group : groups)
+            {
+                if (group.id == contact.group_id)
+                {
+                    validGroup = true;
+                    break;
+                }
+            }
+            if (validGroup)
+            {
+                ContactGroup relation{contact.id, contact.group_id};
+                if (db.saveContactGroup(currentAccountId, relation))
+                    contactGroups.push_back(relation);
+            }
+        }
+        else if (membershipGroupId != 0 && contact.group_id != membershipGroupId)
+        {
+            Contact updated = contact;
+            updated.group_id = membershipGroupId;
+            ContactService::updateContact(updated);
+        }
+    }
+
     nextId = 1;
     for (const Group& group : groups)
         if (group.id >= nextId) nextId = group.id + 1;
@@ -376,5 +513,16 @@ bool GroupService::removeGroup(int groupId)
         if (it->groupId == groupId) it = contactGroups.erase(it);
         else ++it;
     }
+
+    for (const Contact& contact : ContactService::getContacts())
+    {
+        if (contact.group_id == groupId)
+        {
+            Contact updated = contact;
+            updated.group_id = 0;
+            ContactService::updateContact(updated);
+        }
+    }
+
     return true;
 }
