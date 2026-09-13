@@ -5,44 +5,52 @@
 #include <vector>
 #include "AccountService.h"
 
-// Lớp giao diện chính của hệ thống.
+/**
+ * @class MenuUI
+ * @brief Lớp Điều khiển Giao diện Người dùng trên Windows (Win32 API GUI).
+ * Quản lý vẽ các cửa sổ, các ô nhập liệu, nút bấm, chuyển đổi màn hình và bắt sự kiện từ người dùng.
+ */
 class MenuUI
 {
 private:
-    // Các thành phần và trạng thái của giao diện.
-    HWND hWnd;
-    HFONT hTitleFont;
-    HFONT hSubtitleFont;
-    HFONT hNormalFont;
-    HFONT hButtonFont;
-    HFONT hSmallFont;
-    HFONT hIconFont;
+    // --- QUẢN LÝ TÀI NGUYÊN GIAO DIỆN & PHÔNG CHỮ ---
+    HWND hWnd;                 // Handle cửa sổ chính
+    HFONT hTitleFont;          // Font tiêu đề lớn
+    HFONT hSubtitleFont;       // Font tiêu đề phụ
+    HFONT hNormalFont;         // Font chữ mặc định
+    HFONT hButtonFont;         // Font nút bấm
+    HFONT hSmallFont;          // Font chữ nhỏ (chú thích)
+    HFONT hIconFont;           // Font hiển thị Biểu tượng (Icons)
 
-    std::string currentScreen;
-    std::string previousScreen;
-    std::string currentRole;
-    int selectedContactId;
-    int selectedGroupId;
-    int selectedAccountId;
-    std::vector<HWND> screenControls;
-    AccountService accountService;
+    // --- TRẠNG THÁI HIỆN TẠI CỦA ỨNG DỤNG ---
+    std::string currentScreen;     // Màn hình đang mở (vd: "LOGIN", "CONTACTS", "ADMIN")
+    std::string previousScreen;    // Màn hình trước đó (dùng cho nút Back)
+    std::string currentRole;       // Vai trò người dùng hiện tại ("Admin" / "User")
+    int selectedContactId;         // ID danh bạ đang được chọn trên GUI
+    int selectedGroupId;           // ID nhóm đang được chọn trên GUI
+    int selectedAccountId;         // ID tài khoản đang được chọn (Admin View)
+    
+    std::vector<HWND> screenControls; // Danh sách quản lý các Nút, Textbox... của màn hình hiện tại (dùng để xóa khi đổi màn hình)
+    AccountService accountService;   // Dịch vụ xác thực tài khoản kết nối trực tiếp vào UI
 
-    // Xử lý sự kiện của cửa sổ.
+    /**
+     * @brief Hàm lắng nghe & xử lý thông điệp hệ thống của Windows (Window Procedure).
+     */
     static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-    // Các hàm khởi tạo và chuyển đổi giao diện.
-    void createFonts();
-    void clearScreen();
-    void showScreen(const std::string& screen);
+    // --- CÁC THAO TÁC CƠ BẢN QUẢN LÝ MÀN HÌNH ---
+    void createFonts();                                 // Khởi tạo các phông chữ GUI
+    void clearScreen();                                 // Xóa sạch các Widget/Control cũ trên cửa sổ
+    void showScreen(const std::string& screen);         // Điều hướng vẽ màn hình theo tên
 
-    // Các giao diện đăng nhập và tài khoản.
+    // --- MÀN HÌNH ĐĂNG NHẬP / XÁC THỰC ---
     void showLogin();
     void showRegister();
     void showForgotPassword();
     void showAccount();
     void showChangePassword();
 
-    // Các giao diện dành cho User.
+    // --- MÀN HÌNH CHỨC NĂNG DÀNH CHO USER ---
     void showUserMenu();
     void showContacts();
     void showAddContact();
@@ -58,7 +66,7 @@ private:
     void showAssignContact();
     void showFavorites();
 
-    // Các giao diện dành cho Admin.
+    // --- MÀN HÌNH CHỨC NĂNG DÀNH CHO ADMIN ---
     void showAdminMenu();
     void showUserManagement();
     void showAddUser();
@@ -68,7 +76,7 @@ private:
     void showBackup();
     void showRecovery();
 
-    // Các hàm tạo thành phần giao diện.
+    // --- HÀM HỖ TRỢ VẼ CÁC WIDGET / COMPONENT ---
     void createLabel(const char* text, int x, int y, int w, int h, bool title = false);
     HWND createButton(const char* text, int x, int y, int w, int h, int id);
     HWND createIconButton(const wchar_t* text, int x, int y, int w, int h, int id);
@@ -76,22 +84,23 @@ private:
     HWND createList(int x, int y, int w, int h, int id);
     HWND createCombo(const char* text, int x, int y, int w, int h, int id);
 
-    // Các thành phần dùng chung giữa các màn hình.
+    // --- THÀNH PHẦN BỐ TRÍ DÙNG CHUNG (LAYOUT HELPER) ---
     void createBackButton(int id = 900);
     void createHeader(const char* title, const char* subtitle = nullptr);
     void createRoleBadge(const char* role);
 
-    // Xử lý các thao tác của người dùng.
-    void handleCommand(int id);
-    void handleLogin();
-    void handleClose();
-    void handleLogout();
+    // --- HÀM XỬ LÝ SỰ KIỆN NÚT BẤM (EVENT HANDLERS) ---
+    void handleCommand(int id);                         // Xử lý khi bấm nút bất kỳ
+    void handleLogin();                                 // Xử lý sự kiện bấm nút Đăng nhập
+    void handleClose();                                 // Xử lý đóng ứng dụng
+    void handleLogout();                                // Xử lý sự kiện Đăng xuất
 
 public:
-    // Khởi tạo và hủy giao diện.
     MenuUI();
     ~MenuUI();
 
-    // Chạy chương trình.
+    /**
+     * @brief Vòng lặp chính khởi chạy ứng dụng GUI.
+     */
     int run();
 };

@@ -2,17 +2,23 @@
 #include <string>
 using namespace std;
 
+/**
+ * @struct Group
+ * @brief Lớp Mô hình (Model) cho Nhóm liên hệ (vd: Gia đình, Đồng nghiệp, Bạn bè).
+ */
 struct Group
 {
-    int id;
-    int account_id;
-    string name;
-    string description;
+    int id;                 // ID duy nhất của Nhóm
+    int account_id;         // ID tài khoản tạo nhóm này
+    string name;            // Tên nhóm danh bạ
+    string description;     // Mô tả ngắn về nhóm
 
+    // Constructors
     Group();
     Group(int group_id, int account_id,
         string groupName, string description);
 
+    // Getters & Setters
     int getGroupId() const;
     int getAccountId() const;
     string getGroupName() const;
@@ -23,8 +29,12 @@ struct Group
     void setDescription(string description);
 };
 
+/**
+ * @struct ContactGroup
+ * @brief Cấu trúc biểu diễn mối quan hệ Nhiều - Nhiều (Many-to-Many) giữa Contact và Group.
+ */
 struct ContactGroup
 {
-    int contactId;
-    int groupId;
+    int contactId; // ID danh bạ
+    int groupId;   // ID nhóm
 };

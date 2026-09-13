@@ -6,6 +6,7 @@
 #include "Contact.h"
 #include "Group.h"
 
+// --- MÔ PHỎNG CÁC STRUCT CỦA THƯ VIỆN MYSQL C ADAPTER ---
 struct MYSQL {
     int dummy = 0;
 };
@@ -19,6 +20,7 @@ struct MYSQL_RES {
 
 using MYSQL_ROW = char**;
 
+// Cấu trúc Dữ liệu Tài khoản đọc từ CSDL
 struct AccountData {
     int id = 0;
     std::string username;
@@ -29,6 +31,7 @@ struct AccountData {
     std::string role;
 };
 
+// --- CÁC HÀM GIẢ LẬP MYSQL C API (NẾU CHƯA CÀI ĐẶT THƯ VIỆN MYSQL THỰC TẾ) ---
 inline MYSQL* mysql_init(MYSQL*) { return new MYSQL(); }
 inline MYSQL* mysql_real_connect(MYSQL*, const char*, const char*, const char*, const char*, unsigned int, const char*, unsigned long) { return new MYSQL(); }
 inline int mysql_set_character_set(MYSQL*, const char*) { return 0; }
@@ -97,6 +100,11 @@ inline unsigned long mysql_real_escape_string(MYSQL*, char* to, const char* from
     return static_cast<unsigned long>(output.size());
 }
 
+/**
+ * @interface DatabaseConnector
+ * @brief Interface trừu tượng (Abstract Interface) định nghĩa chuẩn thao tác với CSDL.
+ * Giúp dễ dàng thay thế giữa MySQL, SQLite hay File giả lập mà không hỏng ứng dụng (Dependency Inversion Principle).
+ */
 class DatabaseConnector {
 public:
     virtual ~DatabaseConnector() = default;
@@ -112,18 +120,17 @@ public:
 
 /**
  * @class DBManager
- * @brief Lớp quản lý kết nối và tương tác trực tiếp với Cơ sở dữ liệu MySQL.
- * 
- * Lớp này thuộc tầng CSDL (Database Access Layer), tập trung tất cả các thao tác 
- * mở/đóng kết nối, thực thi truy vấn SQL, lưu trữ kết quả và bảo mật dữ liệu.
+ * @brief Tầng Quản lý CSDL thực tế (Data Access Layer - DAL).
+ * Chịu trách nhiệm tương tác trực tiếp với cơ sở dữ liệu MySQL cũng như lưu trữ file dự phòng.
  */
 class DBManager : public DatabaseConnector {
 private:
-    MYSQL* conn;
-    bool connected;
-    int lastInsertId;
-    std::string storageFile;
+    MYSQL* conn;                        // Con trỏ đối tượng kết nối MySQL C-API
+    bool connected;                     // Cờ báo hiệu trạng thái kết nối thành công/thất bại
+    int lastInsertId;                   // Lưu lại ID của bản ghi vừa chèn thành công
+    std::string storageFile;            // Đường dẫn file lưu trữ dữ liệu cục bộ dự phòng (Fallback)
 
+    // Cấu trúc bản ghi lưu trữ thông tin tài khoản
     struct AccountRecord {
         int id = 0;
         std::string username;
@@ -147,71 +154,55 @@ public:
 
     /**
      * Mở kết nối đến máy chủ CSDL MySQL.
-     * @param host Địa chỉ máy chủ CSDL (ví dụ: "localhost", "127.0.0.1" hoặc "db")
-     * @param user Tên tài khoản MySQL
-     * @param password Mật khẩu tài khoản MySQL
-     * @param database Tên CSDL cần thao tác
-     * @param port Cổng kết nối CSDL (mặc định 3306)
-     * @return true nếu kết nối thành công, false nếu gặp lỗi
      */
     bool connect(const std::string& host, const std::string& user, const std::string& password, const std::string& database, unsigned int port = 3306);
 
 private:
     bool connectToServer(const std::string& host, const std::string& user, const std::string& password, const std::string& database, unsigned int port);
-    bool initializeSchema();
+    bool initializeSchema(); // Khởi tạo các bảng dữ liệu (Tables) nếu chưa có trong CSDL
 
 public:
-
-    // Truy xuất trực tiếp con trỏ kết nối MySQL
     MYSQL* getConn() override;
 
-    /**
-     * Thực thi các câu lệnh SQL làm thay đổi dữ liệu (INSERT, UPDATE, DELETE).
-     * @param query Chuỗi câu lệnh SQL
-     * @return true nếu thực thi thành công, false nếu có lỗi
-     */
+    // --- CÁC THAO TÁC TRUY VẤN SQL ---
     MYSQL_RES* executeQuery(const std::string& query) override;
-    bool executeNonQuery(const std::string& query) override;
+    bool executeNonQuery(const std::string& query) override;  // Thực thi DML (INSERT, UPDATE, DELETE)
+    MYSQL_RES* fetchQuery(const std::string& query) override;   // Thực thi DQL (SELECT)
+    void freeResult(MYSQL_RES* result) override;               // Giải phóng bộ nhớ của kết quả truy vấn
 
     /**
-     * Thực thi các câu lệnh SQL lấy dữ liệu (SELECT).
-     * @param query Chuỗi câu lệnh SQL truy vấn
-     * @return Con trỏ MYSQL_RES* chứa tập kết quả hoặc NULL nếu thất bại
-     */
-    MYSQL_RES* fetchQuery(const std::string& query) override;
-    void freeResult(MYSQL_RES* result) override;
-
-    /**
-     * Chuẩn hóa chuỗi văn bản đầu vào để chống tấn công lỗ hổng SQL Injection.
-     * @param str Chuỗi văn bản thô do người dùng nhập
-     * @return Chuỗi đã được chèn các ký tự escape an toàn
+     * @brief Lọc chống tấn công SQL Injection bằng cách chèn escape character.
      */
     std::string escapeString(const std::string& str) const override;
 
-    // Lấy ID tự động tăng (AUTO_INCREMENT) vừa sinh ra từ câu lệnh INSERT gần nhất
     int getInsertId() const override;
     bool isConnected() const override;
     std::string getStorageFile() const;
+
+    // --- QUẢN LÝ BẢNG ACCOUNTS ---
     std::vector<AccountData> getAccounts() const;
     bool getAccount(int accountId, AccountData& account) const;
     bool updateAccount(const AccountData& account);
     bool deleteAccount(int accountId);
 
+    // --- QUẢN LÝ BẢNG CONTACTS ---
     std::vector<Contact> loadContacts(int accountId) const;
     bool saveContact(const Contact& contact) const;
     bool updateContact(const Contact& contact) const;
     bool deleteContact(int accountId, int contactId) const;
 
+    // --- QUẢN LÝ BẢNG GROUPS ---
     std::vector<Group> loadGroups(int accountId) const;
     bool saveGroup(const Group& group) const;
     bool updateGroup(const Group& group) const;
     bool deleteGroup(int accountId, int groupId) const;
 
+    // --- QUẢN LÝ BẢNG LIÊN KẾT DANH BẠ VÀ NHÓM (CONTACT_GROUPS) ---
     std::vector<ContactGroup> loadContactGroups(int accountId) const;
     bool saveContactGroup(int accountId, const ContactGroup& relation) const;
     bool deleteContactGroups(int accountId, int groupId) const;
     bool deleteContactGroup(int accountId, int contactId) const;
 };
 
-// Khai báo đối tượng toàn cục để tái sử dụng 1 kết nối duy nhất trong toàn bộ ứng dụng
+// Đối tượng DBManager dùng chung toàn ứng dụng (Singleton pattern dạng Extern Variable)
 extern DBManager db;
