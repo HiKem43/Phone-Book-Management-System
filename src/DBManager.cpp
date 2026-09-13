@@ -8,6 +8,7 @@
 #include <regex>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -297,4 +298,211 @@ bool DBManager::isConnected() const {
 
 std::string DBManager::getStorageFile() const {
     return storageFile;
+}
+
+std::vector<AccountData> DBManager::getAccounts() const {
+    std::vector<AccountData> accounts;
+    for (const auto& record : accountRecords) {
+        accounts.push_back({record.id, record.username, record.email, record.password,
+                            record.fullname, record.phone, record.role});
+    }
+    return accounts;
+}
+
+bool DBManager::getAccount(int accountId, AccountData& account) const {
+    for (const auto& record : accountRecords) {
+        if (record.id == accountId) {
+            account = {record.id, record.username, record.email, record.password,
+                       record.fullname, record.phone, record.role};
+            return true;
+        }
+    }
+    return false;
+}
+
+bool DBManager::updateAccount(const AccountData& account) {
+    for (auto& record : accountRecords) {
+        if (record.id == account.id) {
+            record.username = account.username;
+            record.email = account.email;
+            record.fullname = account.fullname;
+            record.phone = account.phone;
+            record.role = account.role;
+            if (!account.password.empty()) record.password = account.password;
+            return saveAccounts();
+        }
+    }
+    return false;
+}
+
+bool DBManager::deleteAccount(int accountId) {
+    const auto oldSize = accountRecords.size();
+    accountRecords.erase(std::remove_if(accountRecords.begin(), accountRecords.end(),
+        [accountId](const AccountRecord& record) { return record.id == accountId; }),
+        accountRecords.end());
+    if (accountRecords.size() == oldSize) return false;
+    return saveAccounts();
+}
+
+std::string DBManager::getRelatedStorageFile(const std::string& suffix) const {
+    return storageFile + suffix;
+}
+
+std::vector<Contact> DBManager::loadContacts(int accountId) const {
+    std::vector<Contact> contacts;
+    std::ifstream input(getRelatedStorageFile(".contacts"));
+    Contact contact;
+    while (input >> contact.id >> contact.account_id >> contact.group_id
+                 >> std::quoted(contact.name) >> std::quoted(contact.phone)
+                 >> std::quoted(contact.email) >> std::quoted(contact.address)
+                 >> contact.isFavorite) {
+        if (contact.account_id == accountId) contacts.push_back(contact);
+    }
+    return contacts;
+}
+
+bool DBManager::saveContact(const Contact& contact) const {
+    std::ofstream output(getRelatedStorageFile(".contacts"), std::ios::app);
+    if (!output) return false;
+    output << contact.id << ' ' << contact.account_id << ' ' << contact.group_id << ' '
+           << std::quoted(contact.name) << ' ' << std::quoted(contact.phone) << ' '
+           << std::quoted(contact.email) << ' ' << std::quoted(contact.address) << ' '
+           << contact.isFavorite << '\n';
+    return true;
+}
+
+bool DBManager::updateContact(const Contact& contact) const {
+    std::ifstream input(getRelatedStorageFile(".contacts"));
+    std::vector<Contact> all;
+    Contact current;
+    while (input >> current.id >> current.account_id >> current.group_id
+                 >> std::quoted(current.name) >> std::quoted(current.phone)
+                 >> std::quoted(current.email) >> std::quoted(current.address)
+                 >> current.isFavorite) all.push_back(current);
+    bool found = false;
+    for (auto& item : all) {
+        if (item.id == contact.id && item.account_id == contact.account_id) {
+            item = contact;
+            found = true;
+        }
+    }
+    if (!found) return false;
+    std::ofstream output(getRelatedStorageFile(".contacts"), std::ios::trunc);
+    if (!output) return false;
+    for (const auto& item : all)
+        output << item.id << ' ' << item.account_id << ' ' << item.group_id << ' '
+               << std::quoted(item.name) << ' ' << std::quoted(item.phone) << ' '
+               << std::quoted(item.email) << ' ' << std::quoted(item.address) << ' '
+               << item.isFavorite << '\n';
+    return true;
+}
+
+bool DBManager::deleteContact(int accountId, int contactId) const {
+    std::ifstream input(getRelatedStorageFile(".contacts"));
+    std::vector<Contact> all;
+    Contact current;
+    while (input >> current.id >> current.account_id >> current.group_id
+                 >> std::quoted(current.name) >> std::quoted(current.phone)
+                 >> std::quoted(current.email) >> std::quoted(current.address)
+                 >> current.isFavorite) all.push_back(current);
+    std::ofstream output(getRelatedStorageFile(".contacts"), std::ios::trunc);
+    if (!output) return false;
+    for (const auto& item : all) {
+        if (item.id == contactId && item.account_id == accountId) continue;
+        output << item.id << ' ' << item.account_id << ' ' << item.group_id << ' '
+               << std::quoted(item.name) << ' ' << std::quoted(item.phone) << ' '
+               << std::quoted(item.email) << ' ' << std::quoted(item.address) << ' '
+               << item.isFavorite << '\n';
+    }
+    return true;
+}
+
+std::vector<Group> DBManager::loadGroups(int accountId) const {
+    std::vector<Group> groups;
+    std::ifstream input(getRelatedStorageFile(".groups"));
+    Group group;
+    while (input >> group.id >> group.account_id >> std::quoted(group.name)
+                 >> std::quoted(group.description)) {
+        if (group.account_id == accountId) groups.push_back(group);
+    }
+    return groups;
+}
+
+bool DBManager::saveGroup(const Group& group) const {
+    std::ofstream output(getRelatedStorageFile(".groups"), std::ios::app);
+    if (!output) return false;
+    output << group.id << ' ' << group.account_id << ' ' << std::quoted(group.name)
+           << ' ' << std::quoted(group.description) << '\n';
+    return true;
+}
+
+bool DBManager::updateGroup(const Group& group) const {
+    std::ifstream input(getRelatedStorageFile(".groups"));
+    std::vector<Group> all;
+    Group current;
+    while (input >> current.id >> current.account_id >> std::quoted(current.name)
+                 >> std::quoted(current.description)) all.push_back(current);
+    bool found = false;
+    for (auto& item : all) {
+        if (item.id == group.id && item.account_id == group.account_id) {
+            item = group;
+            found = true;
+        }
+    }
+    if (!found) return false;
+    std::ofstream output(getRelatedStorageFile(".groups"), std::ios::trunc);
+    if (!output) return false;
+    for (const auto& item : all)
+        output << item.id << ' ' << item.account_id << ' ' << std::quoted(item.name)
+               << ' ' << std::quoted(item.description) << '\n';
+    return true;
+}
+
+bool DBManager::deleteGroup(int accountId, int groupId) const {
+    std::ifstream input(getRelatedStorageFile(".groups"));
+    std::vector<Group> all;
+    Group current;
+    while (input >> current.id >> current.account_id >> std::quoted(current.name)
+                 >> std::quoted(current.description)) all.push_back(current);
+    std::ofstream output(getRelatedStorageFile(".groups"), std::ios::trunc);
+    if (!output) return false;
+    for (const auto& item : all) {
+        if (item.id == groupId && item.account_id == accountId) continue;
+        output << item.id << ' ' << item.account_id << ' ' << std::quoted(item.name)
+               << ' ' << std::quoted(item.description) << '\n';
+    }
+    return true;
+}
+
+std::vector<ContactGroup> DBManager::loadContactGroups(int accountId) const {
+    std::vector<ContactGroup> relations;
+    std::ifstream input(getRelatedStorageFile(".memberships"));
+    int storedAccountId;
+    ContactGroup relation;
+    while (input >> storedAccountId >> relation.contactId >> relation.groupId) {
+        if (storedAccountId == accountId) relations.push_back(relation);
+    }
+    return relations;
+}
+
+bool DBManager::saveContactGroup(int accountId, const ContactGroup& relation) const {
+    std::ofstream output(getRelatedStorageFile(".memberships"), std::ios::app);
+    if (!output) return false;
+    output << accountId << ' ' << relation.contactId << ' ' << relation.groupId << '\n';
+    return true;
+}
+
+bool DBManager::deleteContactGroups(int accountId, int groupId) const {
+    std::ifstream input(getRelatedStorageFile(".memberships"));
+    std::vector<std::tuple<int, int, int>> all;
+    int storedAccountId, contactId, storedGroupId;
+    while (input >> storedAccountId >> contactId >> storedGroupId)
+        all.emplace_back(storedAccountId, contactId, storedGroupId);
+    std::ofstream output(getRelatedStorageFile(".memberships"), std::ios::trunc);
+    if (!output) return false;
+    for (const auto& item : all) {
+        if (std::get<0>(item) == accountId && std::get<2>(item) == groupId) continue;
+        output << std::get<0>(item) << ' ' << std::get<1>(item) << ' ' << std::get<2>(item) << '\n';
+    }
+    return true;
 }

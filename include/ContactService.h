@@ -10,6 +10,7 @@ class ContactService
 private:
     static vector<Contact> contacts;
     static int nextId;
+    static int currentAccountId;
 
     static string inputRequired(string message);
     static bool validPhone(string phone);
@@ -27,4 +28,10 @@ public:
     static void deleteContact();
 
     static bool exists(int contactId);
+    static void loadForAccount(int accountId);
+    static void clear();
+    static void toggleFavorite(int contactId);
+    static bool updateContact(const Contact& contact);
+    static bool removeContact(int contactId);
+    static void sortByName();
 };

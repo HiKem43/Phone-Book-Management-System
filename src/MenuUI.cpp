@@ -1,7 +1,10 @@
 #include "MenuUI.h"
 #include "ContactService.h"
+#include "GroupService.h"
 #include "DBManager.h"
 #include <cstdlib>
+#include <commdlg.h>
+#include <filesystem>
 #include <string>
 
 namespace
@@ -98,6 +101,7 @@ namespace
         for (const auto& contact : contacts)
         {
             std::string line = contact.name + " | " + contact.phone + " | " + contact.email;
+            if (contact.isFavorite) line += " | Favorite";
             SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
         }
     }
@@ -109,7 +113,8 @@ namespace
 MenuUI::MenuUI()
     : hWnd(nullptr), hTitleFont(nullptr), hSubtitleFont(nullptr), hNormalFont(nullptr),
       hButtonFont(nullptr), hSmallFont(nullptr), hIconFont(nullptr),
-    currentScreen("login"), previousScreen("login"), currentRole(""), accountService(db)
+    currentScreen("login"), previousScreen("login"), currentRole(""),
+    selectedContactId(0), selectedGroupId(0), selectedAccountId(0), accountService(db)
 {
 }
 
@@ -417,6 +422,16 @@ void MenuUI::showEditContact()
     createLabel("Favorite", 150, 365, 120, 30); createIconButton(L"[*]  Favorite", 290, 360, 160, 38, ID_FAVORITE_TOGGLE);
     createButton("Update", 300, 425, 170, 45, ID_UPDATE);
     createButton("Cancel", 500, 425, 170, 45, ID_CANCEL);
+
+    for (const auto& contact : ContactService::getContacts()) {
+        if (contact.id == selectedContactId) {
+            SetDlgItemTextA(hWnd, 1401, contact.name.c_str());
+            SetDlgItemTextA(hWnd, 1402, contact.phone.c_str());
+            SetDlgItemTextA(hWnd, 1403, contact.email.c_str());
+            SetDlgItemTextA(hWnd, 1404, contact.address.c_str());
+            break;
+        }
+    }
 }
 
 // Giao diện xác nhận xóa Contact.
@@ -470,7 +485,12 @@ void MenuUI::showGroups()
     createLabel("Description", 250, 165, 300, 30);
     createLabel("Contacts", 550, 165, 150, 30);
     HWND list = createList(70, 195, 700, 255, 1601);
-    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"Groups will be loaded here.");
+    const auto& groups = GroupService::getGroups();
+    if (groups.empty()) SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"No groups yet.");
+    for (const auto& group : groups) {
+        std::string line = group.name + " | " + group.description;
+        SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
+    }
     createButton("View", 125, 475, 100, 42, ID_VIEW_GROUP);
     createButton("Edit", 245, 475, 100, 42, ID_EDIT_GROUP);
     createButton("Delete", 365, 475, 100, 42, ID_DELETE_GROUP);
@@ -496,6 +516,14 @@ void MenuUI::showEditGroup()
     createLabel("Description", 160, 210, 130, 30); createEdit("", 310, 205, 380, 35, 1802);
     createButton("Update", 310, 285, 170, 45, ID_UPDATE);
     createButton("Cancel", 510, 285, 170, 45, ID_CANCEL);
+
+    for (const auto& group : GroupService::getGroups()) {
+        if (group.id == selectedGroupId) {
+            SetDlgItemTextA(hWnd, 1801, group.name.c_str());
+            SetDlgItemTextA(hWnd, 1802, group.description.c_str());
+            break;
+        }
+    }
 }
 
 // Giao diện xác nhận xóa Group.
@@ -524,8 +552,16 @@ void MenuUI::showGroupDetail()
 void MenuUI::showAssignContact()
 {
     createHeader("Assign Contact to Group", "Select a contact and a group.");
-    createLabel("Contact", 160, 150, 120, 30); createCombo("Select Contact", 300, 145, 390, 35, 1901);
-    createLabel("Group", 160, 210, 120, 30); createCombo("Select Group", 300, 205, 390, 35, 1902);
+    createLabel("Contact", 160, 150, 120, 30);
+    HWND contactCombo = createCombo(nullptr, 300, 145, 390, 35, 1901);
+    for (const auto& contact : ContactService::getContacts()) {
+        std::string line = contact.name + " | " + contact.phone;
+        SendMessageA(contactCombo, CB_ADDSTRING, 0, (LPARAM)line.c_str());
+    }
+    createLabel("Group", 160, 210, 120, 30);
+    HWND groupCombo = createCombo(nullptr, 300, 205, 390, 35, 1902);
+    for (const auto& group : GroupService::getGroups())
+        SendMessageA(groupCombo, CB_ADDSTRING, 0, (LPARAM)group.name.c_str());
     createButton("Assign", 310, 285, 170, 45, ID_ASSIGN);
     createButton("Cancel", 510, 285, 170, 45, ID_CANCEL);
 }
@@ -539,7 +575,14 @@ void MenuUI::showFavorites()
     createLabel("Phone", 260, 160, 180, 30);
     createLabel("Email", 440, 160, 200, 30);
     HWND list = createList(80, 190, 680, 260, 2001);
-    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"Favorite contacts will be displayed here.");
+    bool found = false;
+    for (const auto& contact : ContactService::getContacts()) {
+        if (!contact.isFavorite) continue;
+        std::string line = contact.name + " | " + contact.phone + " | " + contact.email;
+        SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
+        found = true;
+    }
+    if (!found) SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"No favorite contacts yet.");
     createIconButton(L"[*]  Remove Favorite", 300, 475, 180, 45, ID_FAVORITE_TOGGLE);
     createBackButton();
 }
@@ -555,6 +598,13 @@ void MenuUI::showAccount()
     createButton("Update Profile", 300, 330, 180, 45, ID_ACCOUNT_UPDATE);
     createButton("Change Password", 500, 330, 180, 45, ID_CHANGE_PASSWORD);
     createBackButton();
+    AccountData account;
+    if (db.getAccount(accountService.getCurrentUserId(), account)) {
+        SetDlgItemTextA(hWnd, 2101, account.username.c_str());
+        SetDlgItemTextA(hWnd, 2102, account.fullname.c_str());
+        SetDlgItemTextA(hWnd, 2103, account.email.c_str());
+        SetDlgItemTextA(hWnd, 2104, account.phone.c_str());
+    }
 }
 
 // Giao diện thay đổi mật khẩu.
@@ -583,7 +633,13 @@ void MenuUI::showUserManagement()
     createLabel("Phone", 550, 165, 110, 30);
     createLabel("Role", 660, 165, 100, 30);
     HWND list = createList(60, 195, 730, 255, 2302);
-    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"User accounts will be loaded here.");
+    const auto accounts = db.getAccounts();
+    if (accounts.empty()) SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"No accounts yet.");
+    for (const auto& account : accounts) {
+        std::string line = std::to_string(account.id) + " | " + account.username + " | " +
+            account.fullname + " | " + account.email + " | " + account.phone + " | " + account.role;
+        SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
+    }
     createButton("Edit", 250, 475, 110, 42, ID_EDIT_USER);
     createIconButton(L"[D]  Delete", 390, 475, 120, 42, ID_DELETE_USER);
     createBackButton(ID_ADMIN_MENU);
@@ -654,7 +710,10 @@ void MenuUI::showBackup()
     createLabel("Size", 500, 215, 100, 30);
     createLabel("Status", 600, 215, 120, 30);
     HWND list = createList(70, 245, 680, 200, 2701);
-    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"Backup history will be loaded here.");
+    if (std::filesystem::exists(db.getStorageFile() + ".backup"))
+        SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"phonebook_accounts.db.backup | Available");
+    else
+        SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)"No backup created yet.");
     createButton("Download", 300, 465, 170, 45, ID_DOWNLOAD);
     createBackButton(ID_ADMIN_MENU);
 }
@@ -677,8 +736,9 @@ void MenuUI::showForgotPassword()
     createHeader("Forgot Password", "Password recovery interface.");
     createLabel("Username", 170, 140, 120, 30); createEdit("", 300, 135, 390, 35, 2901);
     createLabel("Email", 170, 195, 120, 30); createEdit("", 300, 190, 390, 35, 2902);
-    createButton("Reset Password", 300, 265, 190, 45, ID_UPDATE);
-    createButton("Cancel", 510, 265, 180, 45, ID_CANCEL);
+    createLabel("New Password", 170, 250, 120, 30); createEdit("", 300, 245, 390, 35, 2903, true);
+    createButton("Reset Password", 300, 320, 190, 45, ID_UPDATE);
+    createButton("Cancel", 510, 320, 180, 45, ID_CANCEL);
     createBackButton();
 }
 
@@ -698,8 +758,11 @@ void MenuUI::handleLogin()
 
     if (accountService.login(username, password))
     {
-        currentRole = "User";
-        showScreen("user");
+        ContactService::loadForAccount(accountService.getCurrentUserId());
+        GroupService::loadForAccount(accountService.getCurrentUserId());
+        AccountData account;
+        currentRole = db.getAccount(accountService.getCurrentUserId(), account) ? account.role : "User";
+        showScreen(currentRole == "Admin" ? "admin" : "user");
         return;
     }
 
@@ -719,6 +782,9 @@ void MenuUI::handleLogin()
 // Xử lý đăng xuất và quay về màn hình Login.
 void MenuUI::handleLogout()
 {
+    ContactService::clear();
+    GroupService::clear();
+    accountService.logout();
     currentRole.clear();
     showScreen("login");
 }
@@ -791,36 +857,106 @@ void MenuUI::handleCommand(int id)
     case ID_CONTACTS: showScreen("contacts"); break;
     case ID_GROUPS: showScreen("groups"); break;
     case ID_FAVORITES:
-        if (currentScreen == "contacts")
-            MessageBoxA(hWnd, "Favorite toggle UI is ready. Favorite logic will be connected later.", "Favorite", MB_OK);
-        else
-            showScreen("favorites");
+        showScreen("favorites");
         break;
     case ID_ACCOUNT: showScreen("account"); break;
 
     case ID_ADD: showScreen("add_contact"); break;
     case ID_EDIT:
-        if (currentScreen == "detail_contact") showScreen("edit_contact");
-        else if (currentScreen == "contacts") showScreen("edit_contact");
+        if (currentScreen == "contacts") {
+            HWND list = GetDlgItem(hWnd, 1202);
+            LRESULT index = SendMessageA(list, LB_GETCURSEL, 0, 0);
+            const auto& contacts = ContactService::getContacts();
+            if (index >= 0 && static_cast<size_t>(index) < contacts.size()) {
+                selectedContactId = contacts[static_cast<size_t>(index)].id;
+                showScreen("edit_contact");
+            }
+        }
+        else if (currentScreen == "detail_contact") showScreen("edit_contact");
         else showScreen("contacts");
         break;
     case ID_DELETE:
         if (currentScreen == "delete_contact")
         {
-            MessageBoxA(hWnd, "Contact deletion UI is ready. Delete logic will be connected later.", "Delete Contact", MB_OK);
-            showScreen("contacts");
+            if (ContactService::removeContact(selectedContactId)) showScreen("contacts");
+            else MessageBoxA(hWnd, "Contact could not be deleted.", "Delete Contact", MB_OK | MB_ICONERROR);
         }
-        else showScreen("delete_contact");
+        else if (currentScreen == "contacts") {
+            HWND list = GetDlgItem(hWnd, 1202);
+            LRESULT index = SendMessageA(list, LB_GETCURSEL, 0, 0);
+            const auto& contacts = ContactService::getContacts();
+            if (index >= 0 && static_cast<size_t>(index) < contacts.size()) {
+                selectedContactId = contacts[static_cast<size_t>(index)].id;
+                showScreen("delete_contact");
+            }
+        }
+        else showScreen("contacts");
         break;
-    case ID_DETAIL: showScreen("detail_contact"); break;
+    case ID_DETAIL:
+        if (currentScreen == "contacts") {
+            LRESULT index = SendMessageA(GetDlgItem(hWnd, 1202), LB_GETCURSEL, 0, 0);
+            const auto& contacts = ContactService::getContacts();
+            if (index >= 0 && static_cast<size_t>(index) < contacts.size()) {
+                selectedContactId = contacts[static_cast<size_t>(index)].id;
+                const auto& contact = contacts[static_cast<size_t>(index)];
+                std::string details = "Name: " + contact.name + "\nPhone: " + contact.phone +
+                    "\nEmail: " + contact.email + "\nAddress: " + contact.address;
+                MessageBoxA(hWnd, details.c_str(), "Contact Details", MB_OK);
+            }
+        }
+        break;
     case ID_SEARCH:
         if (currentScreen == "contacts") showScreen("search");
-        else MessageBoxA(hWnd, "Search UI is ready. Search logic will be connected later.", "Search", MB_OK);
+        else if (currentScreen == "search") {
+            std::string keyword = getEditText(hWnd, 1501);
+            HWND list = GetDlgItem(hWnd, 1502);
+            SendMessageA(list, LB_RESETCONTENT, 0, 0);
+            for (const auto& contact : ContactService::getContacts()) {
+                if (contact.name.find(keyword) != std::string::npos ||
+                    contact.phone.find(keyword) != std::string::npos ||
+                    contact.email.find(keyword) != std::string::npos) {
+                    std::string line = contact.name + " | " + contact.phone + " | " + contact.email;
+                    SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
+                }
+            }
+        }
+        else MessageBoxA(hWnd, "Open Contacts to search.", "Search", MB_OK);
         break;
-    case ID_FILTER: MessageBoxA(hWnd, "Filter UI is ready. Filter logic will be connected later.", "Filter", MB_OK); break;
-    case ID_SORT: MessageBoxA(hWnd, "Sort UI is ready. Sort logic will be connected later.", "Sort", MB_OK); break;
+    case ID_FILTER:
+        if (currentScreen == "search") {
+            HWND list = GetDlgItem(hWnd, 1502);
+            SendMessageA(list, LB_RESETCONTENT, 0, 0);
+            for (const auto& contact : ContactService::getContacts()) {
+                if (!contact.isFavorite) continue;
+                std::string line = contact.name + " | " + contact.phone + " | Favorite";
+                SendMessageA(list, LB_ADDSTRING, 0, (LPARAM)line.c_str());
+            }
+        }
+        break;
+    case ID_SORT:
+        ContactService::sortByName();
+        if (currentScreen == "contacts") showScreen("contacts");
+        break;
     case ID_FAVORITE_TOGGLE:
-        MessageBoxA(hWnd, "Favorite UI is ready. Favorite logic will be connected later.", "Favorite", MB_OK);
+        if (currentScreen == "add_contact" || currentScreen == "edit_contact") break;
+        {
+            HWND list = GetDlgItem(hWnd, currentScreen == "favorites" ? 2001 : 1202);
+            LRESULT selected = SendMessageA(list, LB_GETCURSEL, 0, 0);
+            const auto& contacts = ContactService::getContacts();
+            if (selected >= 0) {
+                size_t contactIndex = static_cast<size_t>(selected);
+                if (currentScreen == "favorites") {
+                    contactIndex = 0;
+                    for (const auto& contact : contacts) {
+                        if (contact.isFavorite && static_cast<LRESULT>(selected--) == 0) break;
+                        if (contact.isFavorite) ++contactIndex;
+                    }
+                }
+                if (contactIndex < contacts.size())
+                    ContactService::toggleFavorite(contacts[contactIndex].id);
+                showScreen(currentScreen == "favorites" ? "favorites" : "contacts");
+            }
+        }
         break;
 
     case ID_SAVE:
@@ -844,7 +980,7 @@ void MenuUI::handleCommand(int id)
             }
 
             Contact contact;
-            contact.account_id = 0;
+            contact.account_id = accountService.getCurrentUserId();
             contact.group_id = 0;
             contact.name = name;
             contact.phone = phone;
@@ -855,22 +991,103 @@ void MenuUI::handleCommand(int id)
             ContactService::addContact(contact);
             showScreen("contacts");
         }
-        else if (currentScreen == "add_group") showScreen("groups");
-        else if (currentScreen == "add_user") showScreen("users");
+        else if (currentScreen == "add_group")
+        {
+            Group group;
+            group.name = getEditText(hWnd, 1701);
+            group.description = getEditText(hWnd, 1702);
+            if (group.name.empty()) {
+                MessageBoxA(hWnd, "Group name cannot be empty.", "Add Group", MB_OK | MB_ICONWARNING);
+                break;
+            }
+            GroupService::addGroup(group);
+            showScreen("groups");
+        }
+        else if (currentScreen == "add_user")
+        {
+            const std::string username = getEditText(hWnd, 2401);
+            const std::string password = getEditText(hWnd, 2402);
+            const std::string fullname = getEditText(hWnd, 2403);
+            const std::string email = getEditText(hWnd, 2404);
+            const std::string phone = getEditText(hWnd, 2405);
+            if (accountService.registerAccount(username, email, password, fullname, phone))
+                showScreen("users");
+            else MessageBoxA(hWnd, "User creation failed.", "Add User", MB_OK | MB_ICONWARNING);
+        }
         break;
 
     case ID_UPDATE:
-        if (currentScreen == "edit_contact") showScreen("contacts");
-        else if (currentScreen == "edit_group") showScreen("groups");
+        if (currentScreen == "edit_contact") {
+            for (const auto& oldContact : ContactService::getContacts()) {
+                if (oldContact.id == selectedContactId) {
+                    Contact contact = oldContact;
+                    contact.name = getEditText(hWnd, 1401);
+                    contact.phone = getEditText(hWnd, 1402);
+                    contact.email = getEditText(hWnd, 1403);
+                    contact.address = getEditText(hWnd, 1404);
+                    if (contact.name.empty() || !validPhoneValue(contact.phone)) {
+                        MessageBoxA(hWnd, "Name and phone are invalid.", "Edit Contact", MB_OK | MB_ICONWARNING);
+                        break;
+                    }
+                    ContactService::updateContact(contact);
+                    showScreen("contacts");
+                    break;
+                }
+            }
+        }
+        else if (currentScreen == "edit_group") {
+            for (const auto& oldGroup : GroupService::getGroups()) {
+                if (oldGroup.id == selectedGroupId) {
+                    Group group = oldGroup;
+                    group.name = getEditText(hWnd, 1801);
+                    group.description = getEditText(hWnd, 1802);
+                    if (!group.name.empty()) GroupService::updateGroup(group);
+                    showScreen("groups");
+                    break;
+                }
+            }
+        }
         else if (currentScreen == "edit_user") showScreen("users");
-        else if (currentScreen == "change_password") showScreen("account");
+        else if (currentScreen == "change_password") {
+            std::string oldPassword = getEditText(hWnd, 2201);
+            std::string newPassword = getEditText(hWnd, 2202);
+            std::string confirmation = getEditText(hWnd, 2203);
+            if (newPassword.empty() || newPassword != confirmation ||
+                !accountService.changePassword(oldPassword, newPassword)) {
+                MessageBoxA(hWnd, "Password change failed.", "Account", MB_OK | MB_ICONWARNING);
+                break;
+            }
+            MessageBoxA(hWnd, "Password changed successfully.", "Account", MB_OK);
+            showScreen("account");
+        }
         else if (currentScreen == "forgot")
         {
-            MessageBoxA(hWnd, "Password recovery UI is ready. Recovery logic will be connected later.", "Forgot Password", MB_OK);
-            showScreen("login");
+            const std::string username = getEditText(hWnd, 2901);
+            const std::string email = getEditText(hWnd, 2902);
+            const std::string newPassword = getEditText(hWnd, 2903);
+            bool reset = false;
+            for (const auto& account : db.getAccounts()) {
+                if (account.username == username && account.email == email && newPassword.size() >= 6) {
+                    reset = db.executeNonQuery("UPDATE Accounts SET password = SHA2('" +
+                        db.escapeString(newPassword) + "', 256) WHERE account_id = " + std::to_string(account.id));
+                    break;
+                }
+            }
+            MessageBoxA(hWnd, reset ? "Password reset successfully." : "Account information is invalid.",
+                        "Forgot Password", MB_OK | (reset ? MB_ICONINFORMATION : MB_ICONWARNING));
+            if (reset) showScreen("login");
         }
         else if (currentScreen == "account")
-            MessageBoxA(hWnd, "Profile update UI is ready. Update logic will be connected later.", "Account", MB_OK);
+        {
+            AccountData account;
+            if (db.getAccount(accountService.getCurrentUserId(), account)) {
+                account.fullname = getEditText(hWnd, 2102);
+                account.email = getEditText(hWnd, 2103);
+                account.phone = getEditText(hWnd, 2104);
+                db.updateAccount(account);
+                MessageBoxA(hWnd, "Profile updated successfully.", "Account", MB_OK);
+            }
+        }
         break;
 
     case ID_CANCEL:
@@ -884,29 +1101,61 @@ void MenuUI::handleCommand(int id)
         break;
 
     case ID_ADD_GROUP: showScreen("add_group"); break;
-    case ID_EDIT_GROUP: showScreen("edit_group"); break;
+    case ID_EDIT_GROUP:
+        if (currentScreen == "groups") {
+            LRESULT index = SendMessageA(GetDlgItem(hWnd, 1601), LB_GETCURSEL, 0, 0);
+            const auto& groups = GroupService::getGroups();
+            if (index >= 0 && static_cast<size_t>(index) < groups.size()) {
+                selectedGroupId = groups[static_cast<size_t>(index)].id;
+                showScreen("edit_group");
+            }
+        }
+        else showScreen("edit_group");
+        break;
     case ID_DELETE_GROUP:
         if (currentScreen == "delete_group")
         {
-            MessageBoxA(hWnd, "Group deletion UI is ready. Delete logic will be connected later.", "Delete Group", MB_OK);
-            showScreen("groups");
+            if (GroupService::removeGroup(selectedGroupId)) showScreen("groups");
+            else MessageBoxA(hWnd, "Group could not be deleted.", "Delete Group", MB_OK | MB_ICONERROR);
         }
-        else showScreen("delete_group");
+        else if (currentScreen == "groups") {
+            LRESULT index = SendMessageA(GetDlgItem(hWnd, 1601), LB_GETCURSEL, 0, 0);
+            const auto& groups = GroupService::getGroups();
+            if (index >= 0 && static_cast<size_t>(index) < groups.size()) {
+                selectedGroupId = groups[static_cast<size_t>(index)].id;
+                showScreen("delete_group");
+            }
+        }
+        else showScreen("groups");
         break;
     case ID_VIEW_GROUP: showScreen("group_detail"); break;
     case ID_GROUP_DETAIL: showScreen("group_detail"); break;
-    case ID_SEARCH_GROUP: MessageBoxA(hWnd, "Search Group UI is ready. Search logic will be connected later.", "Search Group", MB_OK); break;
+    case ID_SEARCH_GROUP:
+        if (GroupService::getGroups().empty()) MessageBoxA(hWnd, "No groups found.", "Search Group", MB_OK);
+        else showScreen("groups");
+        break;
     case ID_ASSIGN:
         if (currentScreen == "groups") showScreen("assign_contact");
         else if (currentScreen == "assign_contact")
         {
-            MessageBoxA(hWnd, "Assign Contact UI is ready. Assignment logic will be connected later.", "Assign Contact", MB_OK);
-            showScreen("groups");
+            LRESULT contactIndex = SendMessageA(GetDlgItem(hWnd, 1901), CB_GETCURSEL, 0, 0);
+            LRESULT groupIndex = SendMessageA(GetDlgItem(hWnd, 1902), CB_GETCURSEL, 0, 0);
+            const auto& contacts = ContactService::getContacts();
+            const auto& groups = GroupService::getGroups();
+            if (contactIndex < 0 || groupIndex < 0 ||
+                static_cast<size_t>(contactIndex) >= contacts.size() ||
+                static_cast<size_t>(groupIndex) >= groups.size()) {
+                MessageBoxA(hWnd, "Select a contact and a group.", "Assign Contact", MB_OK | MB_ICONWARNING);
+                break;
+            }
+            if (GroupService::assignContact(contacts[static_cast<size_t>(contactIndex)].id,
+                                             groups[static_cast<size_t>(groupIndex)].id))
+                showScreen("groups");
         }
         break;
 
     case ID_CHANGE_PASSWORD: showScreen("change_password"); break;
-    case ID_ACCOUNT_UPDATE: MessageBoxA(hWnd, "Profile update UI is ready. Update logic will be connected later.", "Account", MB_OK); break;
+    case ID_ACCOUNT_UPDATE: handleCommand(ID_UPDATE); break;
 
     case ID_USER_MGMT: showScreen("users"); break;
     case ID_REPORTS: showScreen("reports"); break;
@@ -918,19 +1167,68 @@ void MenuUI::handleCommand(int id)
     case ID_DELETE_USER:
         if (currentScreen == "delete_user")
         {
-            MessageBoxA(hWnd, "User deletion UI is ready. Delete logic will be connected later.", "Delete User", MB_OK);
-            showScreen("users");
+            if (selectedAccountId != accountService.getCurrentUserId() && db.deleteAccount(selectedAccountId))
+                showScreen("users");
+            else MessageBoxA(hWnd, "The selected account cannot be deleted.", "Delete User", MB_OK | MB_ICONWARNING);
+        }
+        else if (currentScreen == "users") {
+            LRESULT index = SendMessageA(GetDlgItem(hWnd, 2302), LB_GETCURSEL, 0, 0);
+            const auto accounts = db.getAccounts();
+            if (index >= 0 && static_cast<size_t>(index) < accounts.size()) {
+                selectedAccountId = accounts[static_cast<size_t>(index)].id;
+                showScreen("delete_user");
+            }
         }
         else showScreen("delete_user");
         break;
-    case ID_CREATE_BACKUP: MessageBoxA(hWnd, "Backup UI is ready. Backup logic will be connected later.", "Backup", MB_OK); break;
-    case ID_DOWNLOAD: MessageBoxA(hWnd, "Download UI is ready. File handling will be connected later.", "Backup", MB_OK); break;
-    case ID_BROWSE: MessageBoxA(hWnd, "File selection UI is ready. File validation will be connected later.", "Recovery", MB_OK); break;
+    case ID_CREATE_BACKUP:
+    {
+        std::error_code error;
+        for (const std::string& suffix : {"", ".contacts", ".groups", ".memberships"}) {
+            const std::filesystem::path source = db.getStorageFile() + suffix;
+            const std::filesystem::path backup = source.string() + ".backup";
+            if (std::filesystem::exists(source))
+                std::filesystem::copy_file(source, backup, std::filesystem::copy_options::overwrite_existing, error);
+        }
+        MessageBoxA(hWnd, error ? "Backup failed." : "Backup created successfully.", "Backup",
+                    MB_OK | (error ? MB_ICONERROR : MB_ICONINFORMATION));
+        break;
+    }
+    case ID_DOWNLOAD:
+        MessageBoxA(hWnd, db.getStorageFile().c_str(), "Backup file", MB_OK);
+        break;
+    case ID_BROWSE:
+    {
+        char filename[MAX_PATH] = {};
+        OPENFILENAMEA dialog{};
+        dialog.lStructSize = sizeof(dialog);
+        dialog.hwndOwner = hWnd;
+        dialog.lpstrFilter = "Database backup (*.backup)\0*.backup\0All files (*.*)\0*.*\0";
+        dialog.lpstrFile = filename;
+        dialog.nMaxFile = MAX_PATH;
+        dialog.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+        if (GetOpenFileNameA(&dialog)) SetDlgItemTextA(hWnd, 2801, filename);
+        break;
+    }
     case ID_RESTORE:
         if (MessageBoxA(hWnd, "Are you sure you want to restore the data?", "Confirm Recovery", MB_YESNO | MB_ICONWARNING) == IDYES)
-            MessageBoxA(hWnd, "Restore UI is ready. Recovery logic will be connected later.", "Recovery", MB_OK);
+        {
+            std::error_code error;
+            for (const std::string& suffix : {"", ".contacts", ".groups", ".memberships"}) {
+                const std::filesystem::path backup = db.getStorageFile() + suffix + ".backup";
+                const std::filesystem::path source = db.getStorageFile() + suffix;
+                if (std::filesystem::exists(backup))
+                    std::filesystem::copy_file(backup, source, std::filesystem::copy_options::overwrite_existing, error);
+            }
+            MessageBoxA(hWnd, error ? "Restore failed. Create a backup first." : "Restore completed. Restart the application.",
+                        "Recovery", MB_OK | (error ? MB_ICONERROR : MB_ICONINFORMATION));
+        }
         break;
-    case ID_REFRESH: MessageBoxA(hWnd, "Report refresh UI is ready. Data query will be connected later.", "Reports", MB_OK); break;
+    case ID_REFRESH:
+        MessageBoxA(hWnd, ("Accounts: " + std::to_string(db.getAccounts().size()) +
+            "\nContacts: " + std::to_string(ContactService::getContacts().size()) +
+            "\nGroups: " + std::to_string(GroupService::getGroups().size())).c_str(), "Reports", MB_OK);
+        break;
 
     // Xử lý nút Back và điều hướng về màn hình tương ứng.
     case ID_BACK:

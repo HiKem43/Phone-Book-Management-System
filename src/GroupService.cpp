@@ -1,5 +1,6 @@
 ﻿#include "GroupService.h"
 #include "ContactService.h"
+#include "DBManager.h"
 #include <iostream>
 
 using namespace std;
@@ -7,6 +8,7 @@ using namespace std;
 vector<Group> GroupService::groups;
 vector<ContactGroup> GroupService::contactGroups;
 int GroupService::nextId = 1;
+int GroupService::currentAccountId = 0;
 
 string GroupService::inputRequired(string message)
 {
@@ -98,11 +100,22 @@ void GroupService::addGroup()
     cout << "Description: ";
     getline(cin, group.description);
 
+    group.account_id = currentAccountId;
     group.id = nextId++;
 
     groups.push_back(group);
+    db.saveGroup(group);
 
     cout << "Group added successfully!\n";
+}
+
+void GroupService::addGroup(const Group& source)
+{
+    Group group = source;
+    group.account_id = currentAccountId;
+    group.id = nextId++;
+    groups.push_back(group);
+    db.saveGroup(group);
 }
 
 void GroupService::viewGroups()
@@ -195,6 +208,7 @@ void GroupService::editGroup()
 
             g.name = name;
             g.description = description;
+            db.updateGroup(g);
 
             cout << "Group updated successfully!\n";
             return;
@@ -224,6 +238,8 @@ void GroupService::deleteGroup()
 
             if (confirm == 'Y' || confirm == 'y')
             {
+                db.deleteGroup(currentAccountId, it->id);
+                db.deleteContactGroups(currentAccountId, it->id);
                 groups.erase(it);
 
                 for (auto cg = contactGroups.begin();
@@ -262,10 +278,18 @@ void GroupService::assignContact()
 
     cin.ignore(1000, '\n');
 
+    if (!assignContact(contactId, groupId))
+        return;
+
+    cout << "Contact assigned to group successfully!\n";
+}
+
+bool GroupService::assignContact(int contactId, int groupId)
+{
     if (!ContactService::exists(contactId))
     {
         cout << "Error: Contact not found!\n";
-        return;
+        return false;
     }
 
     bool groupExists = false;
@@ -282,7 +306,7 @@ void GroupService::assignContact()
     if (!groupExists)
     {
         cout << "Error: Group not found!\n";
-        return;
+        return false;
     }
 
     for (const ContactGroup& cg : contactGroups)
@@ -291,7 +315,7 @@ void GroupService::assignContact()
             cg.groupId == groupId)
         {
             cout << "Error: Contact already belongs to this group!\n";
-            return;
+            return false;
         }
     }
 
@@ -300,6 +324,57 @@ void GroupService::assignContact()
     cg.groupId = groupId;
 
     contactGroups.push_back(cg);
+    db.saveContactGroup(currentAccountId, cg);
+    return true;
+}
 
-    cout << "Contact assigned to group successfully!\n";
+const vector<Group>& GroupService::getGroups()
+{
+    return groups;
+}
+
+void GroupService::loadForAccount(int accountId)
+{
+    currentAccountId = accountId;
+    groups = db.loadGroups(accountId);
+    contactGroups = db.loadContactGroups(accountId);
+    nextId = 1;
+    for (const Group& group : groups)
+        if (group.id >= nextId) nextId = group.id + 1;
+}
+
+void GroupService::clear()
+{
+    groups.clear();
+    contactGroups.clear();
+    currentAccountId = 0;
+    nextId = 1;
+}
+
+bool GroupService::updateGroup(const Group& updated)
+{
+    for (Group& group : groups) {
+        if (group.id == updated.id && group.account_id == currentAccountId) {
+            group = updated;
+            return db.updateGroup(group);
+        }
+    }
+    return false;
+}
+
+bool GroupService::removeGroup(int groupId)
+{
+    if (!db.deleteGroup(currentAccountId, groupId) ||
+        !db.deleteContactGroups(currentAccountId, groupId)) return false;
+    for (auto it = groups.begin(); it != groups.end(); ++it) {
+        if (it->id == groupId) {
+            groups.erase(it);
+            break;
+        }
+    }
+    for (auto it = contactGroups.begin(); it != contactGroups.end();) {
+        if (it->groupId == groupId) it = contactGroups.erase(it);
+        else ++it;
+    }
+    return true;
 }

@@ -21,6 +21,9 @@ private:
     std::string currentScreen;
     std::string previousScreen;
     std::string currentRole;
+    int selectedContactId;
+    int selectedGroupId;
+    int selectedAccountId;
     std::vector<HWND> screenControls;
     AccountService accountService;
 

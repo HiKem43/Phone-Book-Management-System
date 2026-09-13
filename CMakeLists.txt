@@ -23,6 +23,6 @@ set(SOURCES
 add_executable(PhoneBookManagementSystem WIN32 ${SOURCES})
 
 if(WIN32)
-    target_link_libraries(PhoneBookManagementSystem PRIVATE user32 gdi32)
+    target_link_libraries(PhoneBookManagementSystem PRIVATE user32 gdi32 comdlg32)
 endif()
 

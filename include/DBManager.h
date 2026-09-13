@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include "Contact.h"
+#include "Group.h"
 
 struct MYSQL {
     int dummy = 0;
@@ -16,6 +18,16 @@ struct MYSQL_RES {
 };
 
 using MYSQL_ROW = char**;
+
+struct AccountData {
+    int id = 0;
+    std::string username;
+    std::string email;
+    std::string password;
+    std::string fullname;
+    std::string phone;
+    std::string role;
+};
 
 inline MYSQL* mysql_init(MYSQL*) { return new MYSQL(); }
 inline MYSQL* mysql_real_connect(MYSQL*, const char*, const char*, const char*, const char*, unsigned int, const char*, unsigned long) { return new MYSQL(); }
@@ -126,6 +138,7 @@ private:
 
     bool loadAccounts();
     bool saveAccounts() const;
+    std::string getRelatedStorageFile(const std::string& suffix) const;
 
 public:
 
@@ -179,6 +192,24 @@ public:
     int getInsertId() const override;
     bool isConnected() const override;
     std::string getStorageFile() const;
+    std::vector<AccountData> getAccounts() const;
+    bool getAccount(int accountId, AccountData& account) const;
+    bool updateAccount(const AccountData& account);
+    bool deleteAccount(int accountId);
+
+    std::vector<Contact> loadContacts(int accountId) const;
+    bool saveContact(const Contact& contact) const;
+    bool updateContact(const Contact& contact) const;
+    bool deleteContact(int accountId, int contactId) const;
+
+    std::vector<Group> loadGroups(int accountId) const;
+    bool saveGroup(const Group& group) const;
+    bool updateGroup(const Group& group) const;
+    bool deleteGroup(int accountId, int groupId) const;
+
+    std::vector<ContactGroup> loadContactGroups(int accountId) const;
+    bool saveContactGroup(int accountId, const ContactGroup& relation) const;
+    bool deleteContactGroups(int accountId, int groupId) const;
 };
 
 // Khai báo đối tượng toàn cục để tái sử dụng 1 kết nối duy nhất trong toàn bộ ứng dụng

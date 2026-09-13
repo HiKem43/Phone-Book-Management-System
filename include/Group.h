@@ -22,3 +22,9 @@ struct Group
     void setGroupName(string groupName);
     void setDescription(string description);
 };
+
+struct ContactGroup
+{
+    int contactId;
+    int groupId;
+};

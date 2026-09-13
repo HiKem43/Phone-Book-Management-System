@@ -1,11 +1,14 @@
 ﻿#include "ContactService.h"
+#include "DBManager.h"
 #include <iostream>
 #include <cctype>
+#include <algorithm>
 
 using namespace std;
 
 vector<Contact> ContactService::contacts;
 int ContactService::nextId = 1;
+int ContactService::currentAccountId = 0;
 
 string ContactService::inputRequired(string message)
 {
@@ -106,8 +109,37 @@ void ContactService::run()
 void ContactService::addContact(const Contact& contact)
 {
     Contact newContact = contact;
+    newContact.account_id = currentAccountId;
     newContact.id = nextId++;
     contacts.push_back(newContact);
+    db.saveContact(newContact);
+}
+
+void ContactService::loadForAccount(int accountId)
+{
+    currentAccountId = accountId;
+    contacts = db.loadContacts(accountId);
+    nextId = 1;
+    for (const Contact& contact : contacts)
+        if (contact.id >= nextId) nextId = contact.id + 1;
+}
+
+void ContactService::clear()
+{
+    contacts.clear();
+    currentAccountId = 0;
+    nextId = 1;
+}
+
+void ContactService::toggleFavorite(int contactId)
+{
+    for (Contact& contact : contacts) {
+        if (contact.id == contactId) {
+            contact.isFavorite = !contact.isFavorite;
+            db.updateContact(contact);
+            return;
+        }
+    }
 }
 
 const vector<Contact>& ContactService::getContacts()
@@ -159,9 +191,11 @@ void ContactService::addContact()
     cout << "Address: ";
     getline(cin, contact.address);
 
+    contact.account_id = currentAccountId;
     contact.id = nextId++;
 
     contacts.push_back(contact);
+    db.saveContact(contact);
 
     cout << "Contact added successfully!\n";
 }
@@ -283,6 +317,7 @@ void ContactService::editContact()
             c.phone = phone;
             c.email = email;
             c.address = address;
+            db.updateContact(c);
 
             cout << "Contact updated successfully!\n";
             return;
@@ -312,6 +347,7 @@ void ContactService::deleteContact()
 
             if (confirm == 'Y' || confirm == 'y')
             {
+                db.deleteContact(currentAccountId, it->id);
                 contacts.erase(it);
                 cout << "Contact deleted successfully!\n";
             }
@@ -336,4 +372,34 @@ bool ContactService::exists(int contactId)
     }
 
     return false;
+}
+
+bool ContactService::updateContact(const Contact& updated)
+{
+    for (Contact& contact : contacts) {
+        if (contact.id == updated.id && contact.account_id == currentAccountId) {
+            contact = updated;
+            return db.updateContact(contact);
+        }
+    }
+    return false;
+}
+
+bool ContactService::removeContact(int contactId)
+{
+    if (!db.deleteContact(currentAccountId, contactId)) return false;
+    for (auto it = contacts.begin(); it != contacts.end(); ++it) {
+        if (it->id == contactId) {
+            contacts.erase(it);
+            return true;
+        }
+    }
+    return false;
+}
+
+void ContactService::sortByName()
+{
+    std::sort(contacts.begin(), contacts.end(), [](const Contact& left, const Contact& right) {
+        return left.name < right.name;
+    });
 }
